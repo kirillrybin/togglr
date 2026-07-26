@@ -52,12 +52,17 @@ program
   });
 
 async function main() {
-  if (process.argv.length <= 2) {
-    const { renderDashboard } = await import("./tui/App.js");
-    const { ctx, config } = await buildContext();
-    renderDashboard(ctx, config);
-  } else {
-    await program.parseAsync();
+  try {
+    if (process.argv.length <= 2) {
+      const { renderDashboard } = await import("./tui/App.js");
+      const { ctx, config } = await buildContext();
+      renderDashboard(ctx, config);
+    } else {
+      await program.parseAsync();
+    }
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
   }
 }
 
