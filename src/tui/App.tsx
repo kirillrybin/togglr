@@ -92,11 +92,19 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       if (input === "q") {
         exit();
       } else if (input === "s" && state?.timer) {
-        await runStop(ctx, config);
+        try {
+          await runStop(ctx, config);
+        } catch (err) {
+          console.error(err instanceof Error ? err.message : String(err));
+        }
         await refresh();
       } else if (input === "c" && state?.recentEntries[selectedIndex]) {
         const entry = state.recentEntries[selectedIndex];
-        await createTimer(ctx, config, entry.description, entry.projectId);
+        try {
+          await createTimer(ctx, config, entry.description, entry.projectId);
+        } catch (err) {
+          console.error(err instanceof Error ? err.message : String(err));
+        }
         await refresh();
       } else if (input === "r") {
         await refresh();
@@ -116,7 +124,11 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       setMode("dashboard");
       const description = value.trim();
       if (description) {
-        await createTimer(ctx, config, description, undefined);
+        try {
+          await createTimer(ctx, config, description, undefined);
+        } catch (err) {
+          console.error(err instanceof Error ? err.message : String(err));
+        }
         await refresh();
       }
     },
