@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getProjects, getTimeEntries, recordSpend, type SyncContext } from "../../src/cache/sync.js";
 import { readJson } from "../../src/cache/store.js";
+import { readTimer, writeTimer } from "../../src/cache/timerState.js";
 import type { RateLimiterState } from "../../src/cache/rateLimiter.js";
 import type { TogglApiClient } from "../../src/api/client.js";
 import type { TogglMeResponse } from "../../src/api/types.js";
@@ -187,6 +188,43 @@ describe("cache/sync", () => {
     // …and the forced spend is still recorded.
     const state = await readJson<RateLimiterState>(join(dir, "rate_limit.json"));
     expect(state?.timestamps).toHaveLength(2);
+  });
+
+  it("clears a stale local timer when a real refresh shows nothing running remotely (e.g. stopped/deleted elsewhere)", async () => {
+    await writeTimer(dir, {
+      entryId: 999, description: "Stale", projectId: null, workspaceId: 9,
+      startedAt: "2026-07-26T09:00:00Z",
+    });
+    const getMe = vi.fn().mockResolvedValue({
+      id: 1, default_workspace_id: 9, projects: [],
+      time_entries: [{
+        id: 999, description: "Stale", project_id: null, workspace_id: 9,
+        start: "2026-07-26T09:00:00Z", stop: "2026-07-26T09:30:00Z", duration: 1800, tags: [],
+      }],
+    } satisfies TogglMeResponse);
+    const ctx = makeCtx({ getMe }, dir);
+
+    await getTimeEntries(ctx);
+
+    expect(await readTimer(dir)).toBeNull();
+  });
+
+  it("adopts a timer started through another client on a real refresh", async () => {
+    const getMe = vi.fn().mockResolvedValue({
+      id: 1, default_workspace_id: 9, projects: [],
+      time_entries: [{
+        id: 42, description: "Started on phone", project_id: null, workspace_id: 9,
+        start: "2026-07-26T11:55:00Z", stop: null, duration: -1721981000, tags: [],
+      }],
+    } satisfies TogglMeResponse);
+    const ctx = makeCtx({ getMe }, dir);
+
+    await getTimeEntries(ctx);
+
+    expect(await readTimer(dir)).toEqual({
+      entryId: 42, description: "Started on phone", projectId: null, workspaceId: 9,
+      startedAt: "2026-07-26T11:55:00Z",
+    });
   });
 
   it("recordSpend appends a timestamp to rate_limit.json", async () => {

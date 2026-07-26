@@ -2,8 +2,10 @@ import path from "node:path";
 import type { TogglApiClient } from "../api/client.js";
 import { mapProjects, mapTimeEntries } from "../domain/mappers.js";
 import type { Project, TimeEntry } from "../domain/models.js";
+import { reconcileTimer } from "../domain/reconcileTimer.js";
 import { readCacheEntry, writeCacheEntry, isStale, readJson, writeJson } from "./store.js";
 import { canSpend, recordRequest, type RateLimiterState } from "./rateLimiter.js";
+import { readTimer, writeTimer } from "./timerState.js";
 
 export const DEFAULT_BUDGET_PER_HOUR = 25;
 
@@ -82,6 +84,16 @@ async function performRefresh(ctx: SyncContext, force: boolean): Promise<Refresh
   const timeEntries = mapTimeEntries(me.time_entries ?? []);
   await writeCacheEntry(projectsFile(ctx), projects, now);
   await writeCacheEntry(timeEntriesFile(ctx), timeEntries, now);
+
+  // We already have fresh truth from Toggl at zero extra API cost — use it to
+  // self-heal timer.json if it silently diverged (started/stopped/deleted via
+  // another client) instead of waiting for a mutation to fail against it.
+  const localTimer = await readTimer(ctx.cacheDir);
+  const reconciled = reconcileTimer(localTimer, timeEntries);
+  if (reconciled?.entryId !== localTimer?.entryId) {
+    await writeTimer(ctx.cacheDir, reconciled);
+  }
+
   return { ok: true, projects, timeEntries };
 }
 
