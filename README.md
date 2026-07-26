@@ -39,7 +39,7 @@ detected automatically.
 ## Usage
 
 ```bash
-toggl start "Coding on togglr" [--project <name>]
+toggl start "Coding on togglr" [--project <name>] [--tag <name>]...
 toggl stop
 toggl status
 toggl continue
@@ -48,9 +48,11 @@ toggl report [today|week]
 toggl
 ```
 
+`toggl` and `togglr` are equivalent — both point at the same binary.
+
 | Command | Description |
 |---|---|
-| `start "<description>" [--project <name>]` | Start a new timer |
+| `start "<description>" [--project <name>] [--tag <name>]...` | Start a new timer (`--tag` is repeatable) |
 | `stop` | Stop the running timer |
 | `status` | Show the current timer and elapsed time (no network call) |
 | `continue` | Repeat the most recent time entry |
