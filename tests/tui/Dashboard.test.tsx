@@ -20,6 +20,7 @@ describe("Dashboard", () => {
         inputValue=""
         onInputChange={noop}
         onInputSubmit={noop}
+        confirmDeleteDescription={null}
       />
     );
     expect(lastFrame()).toContain("No timer running");
@@ -32,13 +33,14 @@ describe("Dashboard", () => {
         elapsedSeconds={2537}
         todayTotalSeconds={11520}
         weekTotalSeconds={50700}
-        recentEntries={[{ description: "Standup", totalSeconds: 900, projectId: null }]}
+        recentEntries={[{ entryId: 2, description: "Standup", totalSeconds: 900, projectId: null }]}
         stale={false}
         selectedIndex={0}
         inputMode={false}
         inputValue=""
         onInputChange={noop}
         onInputSubmit={noop}
+        confirmDeleteDescription={null}
       />
     );
     const frame = lastFrame() ?? "";
@@ -53,6 +55,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={true} selectedIndex={0}
         inputMode={false} inputValue="" onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription={null}
       />
     );
     expect(lastFrame()).toContain("stale");
@@ -64,10 +67,26 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputValue="Coding" onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription={null}
       />
     );
     const frame = lastFrame() ?? "";
     expect(frame).toContain("New timer");
     expect(frame).toContain("Coding");
+  });
+
+  it("shows a delete confirmation prompt naming the entry, instead of the normal hint", () => {
+    const { lastFrame } = render(
+      <Dashboard
+        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={[]} stale={false} selectedIndex={0}
+        inputMode={false} inputValue="" onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription="Standup"
+      />
+    );
+    const frame = lastFrame() ?? "";
+    expect(frame).toContain('Delete "Standup"?');
+    expect(frame).toContain("y/n");
+    expect(frame).not.toContain("[q] quit");
   });
 });

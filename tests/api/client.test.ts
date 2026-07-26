@@ -94,6 +94,23 @@ describe("TogglClient", () => {
     expect(result).toEqual(mockResponse);
   });
 
+  it("sends DELETE request to correct URL for deleteTimeEntry and handles an empty 200 body", async () => {
+    (fetch as any).mockResolvedValue({ ok: true, status: 200, json: async () => { throw new Error("no body to parse"); } });
+    const client = new TogglClient("token");
+
+    await expect(client.deleteTimeEntry(999, 123)).resolves.toBeUndefined();
+
+    const [url, init] = (fetch as any).mock.calls[0];
+    expect(url).toContain("/workspaces/999/time_entries/123");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("throws TogglApiError with status 404 when deleting an entry that no longer exists", async () => {
+    (fetch as any).mockResolvedValue({ ok: false, status: 404, json: async () => ({}) });
+    const client = new TogglClient("token");
+    await expect(client.deleteTimeEntry(999, 123)).rejects.toMatchObject({ status: 404 });
+  });
+
   it("sends PATCH request to correct URL for stopTimeEntry", async () => {
     const mockResponse = { id: 123, description: "Test task", duration: 300, stop: "2026-07-26T11:00:00Z" };
     (fetch as any).mockResolvedValue({ ok: true, status: 200, json: async () => mockResponse });

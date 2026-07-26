@@ -15,6 +15,7 @@ function makeCtx(overrides: Partial<SyncContext> & { getMe: () => Promise<TogglM
     createTimeEntry: vi.fn(),
     createCompletedTimeEntry: vi.fn(),
     stopTimeEntry: vi.fn(),
+    deleteTimeEntry: vi.fn(),
   };
   return {
     client,

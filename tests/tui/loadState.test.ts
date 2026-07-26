@@ -77,6 +77,7 @@ describe("tui loadState", () => {
     const state = await loadState(makeCtx(dir, getMe));
 
     expect(state.recentEntries).toHaveLength(1);
+    expect(state.recentEntries[0].entryId).toBe(1);
     // 11:30 → 12:00 = 1800s, not 0.
     expect(state.recentEntries[0].totalSeconds).toBe(1800);
   });

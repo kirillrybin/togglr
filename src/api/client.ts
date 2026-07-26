@@ -26,6 +26,7 @@ export interface TogglApiClient {
   createTimeEntry(workspaceId: number, data: CreateTimeEntryData): Promise<TogglTimeEntryRaw>;
   createCompletedTimeEntry(workspaceId: number, data: CreateCompletedTimeEntryData): Promise<TogglTimeEntryRaw>;
   stopTimeEntry(workspaceId: number, entryId: number): Promise<TogglTimeEntryRaw>;
+  deleteTimeEntry(workspaceId: number, entryId: number): Promise<void>;
 }
 
 export class TogglClient implements TogglApiClient {
@@ -89,5 +90,17 @@ export class TogglClient implements TogglApiClient {
 
   stopTimeEntry(workspaceId: number, entryId: number): Promise<TogglTimeEntryRaw> {
     return this.request("PATCH", `/workspaces/${workspaceId}/time_entries/${entryId}/stop`);
+  }
+
+  async deleteTimeEntry(workspaceId: number, entryId: number): Promise<void> {
+    // Toggl returns 200 with an EMPTY body for DELETE (confirmed against the
+    // real API) — can't reuse request<T>()'s unconditional res.json() here.
+    const res = await fetch(`${this.baseUrl}/workspaces/${workspaceId}/time_entries/${entryId}`, {
+      method: "DELETE",
+      headers: { Authorization: this.authHeader() },
+    });
+    if (res.status === 401) throw new TogglApiError("Invalid or expired API token", 401);
+    if (res.status === 429) throw new TogglApiError("Rate limited by Toggl", 429);
+    if (!res.ok) throw new TogglApiError(`Toggl API error: ${res.status}`, res.status);
   }
 }

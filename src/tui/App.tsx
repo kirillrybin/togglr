@@ -5,6 +5,7 @@ import { getProjects, getTimeEntries } from "../cache/sync.js";
 import { readTimer } from "../cache/timerState.js";
 import { runStop } from "../commands/stop.js";
 import { createTimer } from "../commands/start.js";
+import { runDeleteEntry } from "../commands/deleteEntry.js";
 import { resolveRange } from "../commands/report.js";
 import { aggregateReport } from "../domain/report.js";
 import type { Config } from "../config/config.js";
@@ -49,6 +50,7 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
     .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime())
     .slice(0, 5)
     .map((e) => ({
+      entryId: e.id,
       description: e.description,
       // A still-running entry has no durationSeconds; fall back to live elapsed
       // time (same rule aggregateReport uses) instead of rendering 00:00:00.
@@ -69,8 +71,9 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   const [state, setState] = useState<LoadedState | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [mode, setMode] = useState<"dashboard" | "new-timer">("dashboard");
+  const [mode, setMode] = useState<"dashboard" | "new-timer" | "confirm-delete">("dashboard");
   const [inputValue, setInputValue] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<{ entryId: number; description: string } | null>(null);
 
   const refresh = useCallback(
     async (opts: { force?: boolean } = {}) => {
@@ -108,6 +111,23 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
 
   useInput(
     async (input) => {
+      if (mode === "confirm-delete" && pendingDelete) {
+        if (input === "y") {
+          const { entryId } = pendingDelete;
+          setPendingDelete(null);
+          setMode("dashboard");
+          try {
+            await runDeleteEntry(ctx, config, entryId);
+          } catch (err) {
+            console.error(err instanceof Error ? err.message : String(err));
+          }
+          await refresh();
+        } else if (input === "n") {
+          setPendingDelete(null);
+          setMode("dashboard");
+        }
+        return;
+      }
       if (input === "q") {
         exit();
       } else if (input === "s" && state?.timer) {
@@ -132,12 +152,16 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       } else if (input === "n") {
         setInputValue("");
         setMode("new-timer");
+      } else if (input === "d" && state?.recentEntries[selectedIndex]) {
+        const entry = state.recentEntries[selectedIndex];
+        setPendingDelete({ entryId: entry.entryId, description: entry.description });
+        setMode("confirm-delete");
       } else if (state && state.recentEntries.length > 0) {
         if (input === "j") setSelectedIndex((i) => Math.min(i + 1, state.recentEntries.length - 1));
         if (input === "k") setSelectedIndex((i) => Math.max(i - 1, 0));
       }
     },
-    { isActive: mode === "dashboard" }
+    { isActive: mode === "dashboard" || mode === "confirm-delete" }
   );
 
   const handleNewTimerSubmit = useCallback(
@@ -171,6 +195,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       inputValue={inputValue}
       onInputChange={setInputValue}
       onInputSubmit={handleNewTimerSubmit}
+      confirmDeleteDescription={mode === "confirm-delete" ? (pendingDelete?.description ?? null) : null}
     />
   );
 }

@@ -72,6 +72,7 @@ timer, a today/week summary, and recent entries.
 | `s` | Stop the running timer |
 | `c` | Continue the highlighted entry |
 | `n` | Start a new timer (opens an inline description prompt) |
+| `d` | Delete the highlighted entry (asks for `y`/`n` confirmation first) |
 | `j` / `k` | Move the highlight up/down the recent-entries list |
 | `r` | Force refresh (bypasses the cache TTL and rate-limit budget for one call) |
 | `q` | Quit |

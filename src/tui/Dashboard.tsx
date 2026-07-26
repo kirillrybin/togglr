@@ -5,6 +5,7 @@ import type { Timer } from "../domain/models.js";
 import { formatDuration } from "../commands/status.js";
 
 export interface RecentEntryView {
+  entryId: number;
   description: string;
   totalSeconds: number;
   projectId: number | null;
@@ -22,6 +23,7 @@ export interface DashboardProps {
   inputValue: string;
   onInputChange: (value: string) => void;
   onInputSubmit: (value: string) => void;
+  confirmDeleteDescription: string | null;
 }
 
 export function Dashboard(props: DashboardProps): React.ReactElement {
@@ -57,9 +59,13 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
           <Text>New timer: </Text>
           <TextInput value={props.inputValue} onChange={props.onInputChange} onSubmit={props.onInputSubmit} />
         </Box>
+      ) : props.confirmDeleteDescription !== null ? (
+        <Box marginTop={1}>
+          <Text color="red">Delete "{props.confirmDeleteDescription}"? (y/n)</Text>
+        </Box>
       ) : (
         <Box marginTop={1}>
-          <Text dimColor>[j/k] move  [s] stop  [c] continue  [n] new  [r] refresh  [q] quit</Text>
+          <Text dimColor>[j/k] move  [s] stop  [c] continue  [n] new  [d] delete  [r] refresh  [q] quit</Text>
         </Box>
       )}
     </Box>
