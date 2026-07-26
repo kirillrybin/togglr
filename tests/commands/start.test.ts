@@ -71,6 +71,24 @@ describe("commands/start", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it("runStart passes tags through to the created time entry", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "togglr-start-test-"));
+    const createTimeEntry = vi.fn().mockResolvedValue({
+      id: 1, description: "Coding", project_id: null, workspace_id: 9,
+      start: "2026-07-26T12:00:00Z", stop: null, duration: -1, tags: ["billable"],
+    });
+    const ctx = makeCtx(dir, { createTimeEntry });
+
+    await runStart(ctx, config, { description: "Coding", tags: ["billable"] });
+
+    expect(createTimeEntry).toHaveBeenCalledWith(9, {
+      description: "Coding",
+      project_id: undefined,
+      tags: ["billable"],
+    });
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   it("runStart throws when the project name does not match any cached project", async () => {
     const dir = mkdtempSync(join(tmpdir(), "togglr-start-test-"));
     const getMe = vi.fn().mockResolvedValue({ id: 1, default_workspace_id: 9, projects: [], time_entries: [] });

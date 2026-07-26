@@ -7,13 +7,15 @@ import type { Timer } from "../domain/models.js";
 export interface StartOptions {
   description: string;
   projectName?: string;
+  tags?: string[];
 }
 
 export async function createTimer(
   ctx: SyncContext,
   config: Config,
   description: string,
-  projectId: number | null | undefined
+  projectId: number | null | undefined,
+  tags?: string[]
 ): Promise<Timer> {
   const existing = await readTimer(ctx.cacheDir);
   if (existing) {
@@ -22,6 +24,7 @@ export async function createTimer(
   const raw = await ctx.client.createTimeEntry(config.workspaceId, {
     description,
     project_id: projectId ?? undefined,
+    tags,
   });
   // Mutations are never throttled by the budget, but they DO consume a real
   // Toggl request and must be counted, or the rolling-hour ledger undercounts.
@@ -47,5 +50,5 @@ export async function runStart(ctx: SyncContext, config: Config, opts: StartOpti
     if (!match) throw new Error(`Unknown project: ${opts.projectName}`);
     projectId = match.id;
   }
-  return createTimer(ctx, config, opts.description, projectId);
+  return createTimer(ctx, config, opts.description, projectId, opts.tags);
 }

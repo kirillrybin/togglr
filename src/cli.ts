@@ -18,12 +18,21 @@ function degradedNotice(reason: DegradedReason): string {
     : "(rate limit budget reached — showing cached data)";
 }
 
+function collectTag(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
 program
   .command("start <description>")
   .option("--project <name>")
-  .action(async (description: string, opts: { project?: string }) => {
+  .option("--tag <name>", "add a tag (repeatable)", collectTag, [] as string[])
+  .action(async (description: string, opts: { project?: string; tag: string[] }) => {
     const { ctx, config } = await buildContext();
-    const timer = await runStart(ctx, config, { description, projectName: opts.project });
+    const timer = await runStart(ctx, config, {
+      description,
+      projectName: opts.project,
+      tags: opts.tag.length > 0 ? opts.tag : undefined,
+    });
     console.log(`Started: ${timer.description}`);
   });
 
