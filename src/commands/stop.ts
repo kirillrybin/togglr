@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { SyncContext } from "../cache/sync.js";
+import { recordSpend } from "../cache/sync.js";
 import { readTimer, writeTimer } from "../cache/timerState.js";
 import { mapTimeEntry } from "../domain/mappers.js";
 import type { TimeEntry } from "../domain/models.js";
@@ -11,6 +12,9 @@ export async function runStop(ctx: SyncContext, config: Config): Promise<TimeEnt
   if (!timer) throw new Error("No timer is currently running.");
 
   const raw = await ctx.client.stopTimeEntry(config.workspaceId, timer.entryId);
+  // Mutations are never throttled by the budget, but they DO consume a real
+  // Toggl request and must be counted, or the rolling-hour ledger undercounts.
+  await recordSpend(ctx);
   const entry = mapTimeEntry(raw);
 
   await writeTimer(ctx.cacheDir, null);

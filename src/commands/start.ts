@@ -1,5 +1,5 @@
 import type { SyncContext } from "../cache/sync.js";
-import { getProjects } from "../cache/sync.js";
+import { getProjects, recordSpend } from "../cache/sync.js";
 import { readTimer, writeTimer } from "../cache/timerState.js";
 import type { Config } from "../config/config.js";
 import type { Timer } from "../domain/models.js";
@@ -23,6 +23,9 @@ export async function createTimer(
     description,
     project_id: projectId ?? undefined,
   });
+  // Mutations are never throttled by the budget, but they DO consume a real
+  // Toggl request and must be counted, or the rolling-hour ledger undercounts.
+  await recordSpend(ctx);
   const timer: Timer = {
     entryId: raw.id,
     description: raw.description,
@@ -37,7 +40,9 @@ export async function createTimer(
 export async function runStart(ctx: SyncContext, config: Config, opts: StartOptions): Promise<Timer> {
   let projectId: number | undefined;
   if (opts.projectName) {
-    const projects = await getProjects(ctx);
+    // `degraded` is deliberately ignored: on a mutation path, resolving the
+    // project name against slightly stale project data is an acceptable tradeoff.
+    const { data: projects } = await getProjects(ctx);
     const match = projects.find((p) => p.name.toLowerCase() === opts.projectName!.toLowerCase());
     if (!match) throw new Error(`Unknown project: ${opts.projectName}`);
     projectId = match.id;

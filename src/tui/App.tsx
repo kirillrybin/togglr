@@ -14,7 +14,7 @@ import { Dashboard, type RecentEntryView } from "./Dashboard.js";
 const REFRESH_INTERVAL_MS = 30_000;
 const TICK_INTERVAL_MS = 1000;
 
-interface LoadedState {
+export interface LoadedState {
   timer: Timer | null;
   todayTotalSeconds: number;
   weekTotalSeconds: number;
@@ -30,12 +30,16 @@ const EMPTY_STATE: LoadedState = {
   stale: false,
 };
 
-async function loadState(ctx: SyncContext): Promise<LoadedState> {
-  const [timer, entries, projects] = await Promise.all([
+// Exported for tests: this is where a degraded read becomes the `stale` flag
+// the Dashboard renders, and where a running entry gets its live duration.
+export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}): Promise<LoadedState> {
+  const [timer, entriesResult, projectsResult] = await Promise.all([
     readTimer(ctx.cacheDir),
-    getTimeEntries(ctx),
-    getProjects(ctx),
+    getTimeEntries(ctx, opts),
+    getProjects(ctx, opts),
   ]);
+  const entries = entriesResult.data;
+  const projects = projectsResult.data;
   const now = ctx.now();
   const today = resolveRange("today", now);
   const week = resolveRange("week", now);
@@ -44,13 +48,19 @@ async function loadState(ctx: SyncContext): Promise<LoadedState> {
   const recentEntries: RecentEntryView[] = [...entries]
     .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime())
     .slice(0, 5)
-    .map((e) => ({ description: e.description, totalSeconds: e.durationSeconds ?? 0, projectId: e.projectId }));
+    .map((e) => ({
+      description: e.description,
+      // A still-running entry has no durationSeconds; fall back to live elapsed
+      // time (same rule aggregateReport uses) instead of rendering 00:00:00.
+      totalSeconds: e.durationSeconds ?? (now.getTime() - new Date(e.start).getTime()) / 1000,
+      projectId: e.projectId,
+    }));
   return {
     timer,
     todayTotalSeconds: todaySummary.reduce((sum, s) => sum + s.totalSeconds, 0),
     weekTotalSeconds: weekSummary.reduce((sum, s) => sum + s.totalSeconds, 0),
     recentEntries,
-    stale: false,
+    stale: entriesResult.degraded !== null || projectsResult.degraded !== null,
   };
 }
 
@@ -62,19 +72,28 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   const [mode, setMode] = useState<"dashboard" | "new-timer">("dashboard");
   const [inputValue, setInputValue] = useState("");
 
-  const refresh = useCallback(async () => {
-    try {
-      const next = await loadState(ctx);
-      setState(next);
-      setSelectedIndex((i) => Math.min(i, Math.max(next.recentEntries.length - 1, 0)));
-    } catch {
-      setState((prev) => (prev ? { ...prev, stale: true } : prev));
-    }
-  }, [ctx]);
+  const refresh = useCallback(
+    async (opts: { force?: boolean } = {}) => {
+      try {
+        const next = await loadState(ctx, opts);
+        setState(next);
+        setSelectedIndex((i) => Math.min(i, Math.max(next.recentEntries.length - 1, 0)));
+      } catch {
+        // Defensive fallback only. Offline/throttled reads no longer throw —
+        // they come back as valid results carrying `degraded`, which loadState
+        // already turns into `stale: true`. This catch is for genuinely
+        // unexpected failures (e.g. an unreadable cache directory).
+        setState((prev) => (prev ? { ...prev, stale: true } : prev));
+      }
+    },
+    [ctx]
+  );
 
   useEffect(() => {
     refresh();
-    const interval = setInterval(refresh, REFRESH_INTERVAL_MS);
+    // Wrapped so the timer never accidentally passes arguments into `refresh`'s
+    // new opts parameter — automatic polling must never force-bypass the budget.
+    const interval = setInterval(() => refresh(), REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [refresh]);
 
@@ -107,7 +126,9 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
         }
         await refresh();
       } else if (input === "r") {
-        await refresh();
+        // Explicit user-initiated refresh: bypasses both the TTL freshness
+        // check and the rolling-hour budget gate (the spend is still recorded).
+        await refresh({ force: true });
       } else if (input === "n") {
         setInputValue("");
         setMode("new-timer");

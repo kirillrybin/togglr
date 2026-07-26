@@ -38,7 +38,31 @@ describe("runReport", () => {
 
     const result = await runReport(ctx, "today");
 
-    expect(result).toEqual([{ projectId: 1, projectName: "Website", totalSeconds: 1800 }]);
+    expect(result.data).toEqual([{ projectId: 1, projectName: "Website", totalSeconds: 1800 }]);
+    expect(result.degraded).toBeNull();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("reports degraded='offline' and still returns cached numbers when the API is unreachable", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "togglr-report-test-"));
+    // Cache written an hour ago so both TTLs are genuinely expired.
+    const syncedAt = new Date("2026-07-26T11:00:00Z");
+    await writeCacheEntry(join(dir, "projects.json"), [{ id: 1, name: "Website", color: "#fff", workspaceId: 9 }], syncedAt);
+    await writeCacheEntry(join(dir, "time_entries.json"), [
+      { id: 1, description: "Coding", projectId: 1, workspaceId: 9, start: "2026-07-26T10:00:00Z", stop: "2026-07-26T10:30:00Z", durationSeconds: 1800, tags: [] },
+    ], syncedAt);
+    const ctx: SyncContext = {
+      client: { getMe: vi.fn().mockRejectedValue(new Error("fetch failed")), createTimeEntry: vi.fn(), stopTimeEntry: vi.fn() } as any,
+      cacheDir: dir,
+      ttlSeconds: { projects: 60, timeEntries: 60 }, // expired → refresh attempted
+      budgetPerHour: 25,
+      now: () => new Date("2026-07-26T12:00:00Z"),
+    };
+
+    const result = await runReport(ctx, "today");
+
+    expect(result.degraded).toBe("offline");
+    expect(result.data).toEqual([{ projectId: 1, projectName: "Website", totalSeconds: 1800 }]);
     rmSync(dir, { recursive: true, force: true });
   });
 });

@@ -2,9 +2,12 @@ import type { SyncContext } from "../cache/sync.js";
 import { readTimer } from "../cache/timerState.js";
 
 export function formatDuration(totalSeconds: number): string {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = Math.floor(totalSeconds % 60);
+  // Clamp: negative input (reachable via clock skew) otherwise renders as
+  // garbage like "-1:-1:-5" because Math.floor rounds away from zero here.
+  const clamped = Math.max(0, totalSeconds);
+  const h = Math.floor(clamped / 3600);
+  const m = Math.floor((clamped % 3600) / 60);
+  const s = Math.floor(clamped % 60);
   return [h, m, s].map((n) => String(n).padStart(2, "0")).join(":");
 }
 

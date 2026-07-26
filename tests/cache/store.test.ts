@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -33,6 +33,26 @@ describe("cache/store", () => {
     await writeCacheEntry(file, [1, 2, 3], now);
     const entry = await readCacheEntry<number[]>(file);
     expect(entry).toEqual({ lastSyncedAt: now.toISOString(), data: [1, 2, 3] });
+  });
+
+  it("treats a corrupted/truncated JSON file as a cache miss instead of throwing", async () => {
+    const file = join(dir, "corrupt.json");
+    writeFileSync(file, '{"lastSyncedAt": "2026-07-26T10:00:00Z", "data": [{"id": 1');
+    expect(await readJson(file)).toBeNull();
+    expect(await readCacheEntry(file)).toBeNull();
+  });
+
+  it("still rethrows non-parse, non-ENOENT read errors", async () => {
+    // Reading a directory as a file fails with EISDIR on macOS/Linux.
+    await expect(readJson(dir)).rejects.toThrow();
+  });
+
+  it("writes atomically and leaves no temp file behind", async () => {
+    const file = join(dir, "atomic.json");
+    await writeJson(file, { a: 1 });
+    await writeJson(file, { a: 2 });
+    expect(await readJson(file)).toEqual({ a: 2 });
+    expect(readdirSync(dir)).toEqual(["atomic.json"]);
   });
 
   it("isStale is true when no entry exists", () => {

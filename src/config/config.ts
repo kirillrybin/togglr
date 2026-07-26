@@ -21,6 +21,9 @@ export async function readConfig(configDir: string): Promise<Config | null> {
 export async function writeConfig(configDir: string, config: Config): Promise<void> {
   const file = configFile(configDir);
   await fs.mkdir(configDir, { recursive: true });
-  await fs.writeFile(file, JSON.stringify(config, null, 2), "utf-8");
+  // `mode` closes the window in which the plaintext-token file would otherwise
+  // exist world-readable between writeFile and chmod. The explicit chmod stays
+  // as a belt-and-suspenders step because `mode` is still subject to umask.
+  await fs.writeFile(file, JSON.stringify(config, null, 2), { encoding: "utf-8", mode: 0o600 });
   await fs.chmod(file, 0o600);
 }

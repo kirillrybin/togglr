@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runStart, createTimer } from "../../src/commands/start.js";
 import { readTimer } from "../../src/cache/timerState.js";
+import { readJson } from "../../src/cache/store.js";
+import type { RateLimiterState } from "../../src/cache/rateLimiter.js";
 import type { SyncContext } from "../../src/cache/sync.js";
 import type { Config } from "../../src/config/config.js";
 
@@ -32,6 +34,21 @@ describe("commands/start", () => {
 
     expect(timer.entryId).toBe(1);
     expect(await readTimer(dir)).toEqual(timer);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("createTimer records its API spend against the rolling-hour budget", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "togglr-start-test-"));
+    const createTimeEntry = vi.fn().mockResolvedValue({
+      id: 1, description: "Coding", project_id: null, workspace_id: 9,
+      start: "2026-07-26T12:00:00Z", stop: null, duration: -1, tags: [],
+    });
+    const ctx = makeCtx(dir, { createTimeEntry });
+
+    await createTimer(ctx, config, "Coding", undefined);
+
+    const state = await readJson<RateLimiterState>(join(dir, "rate_limit.json"));
+    expect(state?.timestamps).toEqual(["2026-07-26T12:00:00.000Z"]);
     rmSync(dir, { recursive: true, force: true });
   });
 

@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runStop } from "../../src/commands/stop.js";
 import { writeTimer, readTimer } from "../../src/cache/timerState.js";
-import { writeCacheEntry } from "../../src/cache/store.js";
+import { writeCacheEntry, readJson } from "../../src/cache/store.js";
+import type { RateLimiterState } from "../../src/cache/rateLimiter.js";
 import type { SyncContext } from "../../src/cache/sync.js";
 import type { Config } from "../../src/config/config.js";
 
@@ -36,6 +37,9 @@ describe("commands/stop", () => {
     expect(stopTimeEntry).toHaveBeenCalledWith(9, 1);
     expect(await readTimer(dir)).toBeNull();
     expect(existsSync(join(dir, "time_entries.json"))).toBe(false);
+    // The stop mutation consumed a real Toggl request and must be counted.
+    const rlState = await readJson<RateLimiterState>(join(dir, "rate_limit.json"));
+    expect(rlState?.timestamps).toEqual(["2026-07-26T12:00:00.000Z"]);
     rmSync(dir, { recursive: true, force: true });
   });
 

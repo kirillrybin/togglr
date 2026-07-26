@@ -7,9 +7,16 @@ import { runStatus, formatDuration } from "./commands/status.js";
 import { runListProjects } from "./commands/listProjects.js";
 import { runContinue } from "./commands/continueLast.js";
 import { runReport, type ReportRange } from "./commands/report.js";
+import type { DegradedReason } from "./cache/sync.js";
 
 const program = new Command();
 program.name("toggl");
+
+function degradedNotice(reason: DegradedReason): string {
+  return reason === "offline"
+    ? "(offline — showing cached data)"
+    : "(rate limit budget reached — showing cached data)";
+}
 
 program
   .command("start <description>")
@@ -33,7 +40,8 @@ program.command("status").action(async () => {
 
 program.command("list-projects").action(async () => {
   const { ctx } = await buildContext();
-  const projects = await runListProjects(ctx);
+  const { data: projects, degraded } = await runListProjects(ctx);
+  if (degraded) console.error(degradedNotice(degraded));
   projects.forEach((p) => console.log(p.name));
 });
 
@@ -46,8 +54,13 @@ program.command("continue").action(async () => {
 program
   .command("report [range]")
   .action(async (range: string = "today") => {
+    if (range !== "today" && range !== "week") {
+      console.error(`Unknown report range: "${range}". Use "today" or "week".`);
+      process.exit(1);
+    }
     const { ctx } = await buildContext();
-    const summaries = await runReport(ctx, range as ReportRange);
+    const { data: summaries, degraded } = await runReport(ctx, range as ReportRange);
+    if (degraded) console.error(degradedNotice(degraded));
     summaries.forEach((s) => console.log(`${s.projectName}: ${formatDuration(Math.round(s.totalSeconds))}`));
   });
 

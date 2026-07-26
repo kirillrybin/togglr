@@ -12,13 +12,31 @@ export async function readJson<T>(filePath: string): Promise<T | null> {
     return JSON.parse(raw) as T;
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    // A truncated / corrupted cache file must behave like a cache miss, not
+    // like a fatal error — otherwise one bad write bricks every subsequent
+    // command (including ones that need no network at all, e.g. `status`).
+    if (err instanceof SyntaxError) return null;
     throw err;
   }
 }
 
+// Distinguishes temp files of two writes racing inside a single process; the
+// pid distinguishes them across processes.
+let writeCounter = 0;
+
 export async function writeJson<T>(filePath: string, data: T): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+  // Atomic write: a crash mid-write can only ever leave a stray temp file
+  // behind, never a half-written filePath. rename(2) within one directory
+  // (hence the same filesystem) is atomic.
+  const tmpPath = `${filePath}.tmp-${process.pid}-${writeCounter++}`;
+  try {
+    await fs.writeFile(tmpPath, JSON.stringify(data, null, 2), "utf-8");
+    await fs.rename(tmpPath, filePath);
+  } catch (err) {
+    await fs.rm(tmpPath, { force: true }).catch(() => {});
+    throw err;
+  }
 }
 
 export async function readCacheEntry<T>(filePath: string): Promise<CacheEntry<T> | null> {
