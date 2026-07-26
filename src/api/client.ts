@@ -13,9 +13,18 @@ export interface CreateTimeEntryData {
   tags?: string[];
 }
 
+export interface CreateCompletedTimeEntryData {
+  description: string;
+  project_id?: number;
+  tags?: string[];
+  start: string;
+  stop: string;
+}
+
 export interface TogglApiClient {
   getMe(withRelatedData: boolean): Promise<TogglMeResponse>;
   createTimeEntry(workspaceId: number, data: CreateTimeEntryData): Promise<TogglTimeEntryRaw>;
+  createCompletedTimeEntry(workspaceId: number, data: CreateCompletedTimeEntryData): Promise<TogglTimeEntryRaw>;
   stopTimeEntry(workspaceId: number, entryId: number): Promise<TogglTimeEntryRaw>;
 }
 
@@ -55,6 +64,25 @@ export class TogglClient implements TogglApiClient {
       workspace_id: workspaceId,
       start: new Date().toISOString(),
       duration: -1,
+      created_with: "togglr",
+    });
+  }
+
+  createCompletedTimeEntry(
+    workspaceId: number,
+    data: CreateCompletedTimeEntryData
+  ): Promise<TogglTimeEntryRaw> {
+    const durationSeconds = Math.round(
+      (new Date(data.stop).getTime() - new Date(data.start).getTime()) / 1000
+    );
+    return this.request("POST", `/workspaces/${workspaceId}/time_entries`, {
+      description: data.description,
+      project_id: data.project_id,
+      tags: data.tags,
+      workspace_id: workspaceId,
+      start: data.start,
+      stop: data.stop,
+      duration: durationSeconds,
       created_with: "togglr",
     });
   }

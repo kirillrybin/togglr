@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { buildContext } from "./bootstrap.js";
 import { runStart } from "./commands/start.js";
+import { runAdd } from "./commands/add.js";
 import { runStop } from "./commands/stop.js";
 import { runStatus, formatDuration } from "./commands/status.js";
 import { runListProjects } from "./commands/listProjects.js";
@@ -34,6 +35,24 @@ program
       tags: opts.tag.length > 0 ? opts.tag : undefined,
     });
     console.log(`Started: ${timer.description}`);
+  });
+
+program
+  .command("add <description>")
+  .requiredOption("--start <HH:MM>", "start time, today")
+  .requiredOption("--end <HH:MM>", "end time, today")
+  .option("--project <name>")
+  .option("--tag <name>", "add a tag (repeatable)", collectTag, [] as string[])
+  .action(async (description: string, opts: { start: string; end: string; project?: string; tag: string[] }) => {
+    const { ctx, config } = await buildContext();
+    const entry = await runAdd(ctx, config, {
+      description,
+      start: opts.start,
+      end: opts.end,
+      projectName: opts.project,
+      tags: opts.tag.length > 0 ? opts.tag : undefined,
+    });
+    console.log(`Added: ${entry.description} (${formatDuration(entry.durationSeconds ?? 0)})`);
   });
 
 program.command("stop").action(async () => {

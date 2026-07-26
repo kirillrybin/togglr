@@ -13,6 +13,7 @@ function makeCtx(overrides: Partial<SyncContext> & { getMe: () => Promise<TogglM
   const client: TogglApiClient = {
     getMe: overrides.getMe,
     createTimeEntry: vi.fn(),
+    createCompletedTimeEntry: vi.fn(),
     stopTimeEntry: vi.fn(),
   };
   return {
