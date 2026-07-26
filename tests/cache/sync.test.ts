@@ -84,4 +84,25 @@ describe("cache/sync", () => {
     expect(projects).toEqual([{ id: 1, name: "Web", color: "#fff", workspaceId: 9 }]);
     expect(getMe).toHaveBeenCalledTimes(1);
   });
+
+  it("calls the API exactly once when getProjects and getTimeEntries are invoked concurrently on a cold cache", async () => {
+    const getMe = vi.fn().mockResolvedValue({
+      id: 1,
+      default_workspace_id: 9,
+      projects: [{ id: 1, name: "Web", color: "#fff", workspace_id: 9 }],
+      time_entries: [{
+        id: 1, description: "Coding", project_id: 1, workspace_id: 9,
+        start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:30:00Z", duration: 1800, tags: [],
+      }],
+    } satisfies TogglMeResponse);
+    const ctx = makeCtx({ getMe }, dir);
+
+    // Mirrors the real usage pattern in report.ts and the TUI's loadState:
+    // both getters called concurrently against a cold cache.
+    const [entries, projects] = await Promise.all([getTimeEntries(ctx), getProjects(ctx)]);
+
+    expect(projects).toEqual([{ id: 1, name: "Web", color: "#fff", workspaceId: 9 }]);
+    expect(entries).toHaveLength(1);
+    expect(getMe).toHaveBeenCalledTimes(1);
+  });
 });

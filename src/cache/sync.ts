@@ -27,9 +27,17 @@ function rateLimitFile(ctx: SyncContext): string {
   return path.join(ctx.cacheDir, "rate_limit.json");
 }
 
-export async function refreshAll(
-  ctx: SyncContext
-): Promise<{ projects: Project[]; timeEntries: TimeEntry[] } | null> {
+type RefreshResult = { projects: Project[]; timeEntries: TimeEntry[] } | null;
+
+// Single-flight guard: concurrent callers sharing the same cacheDir (e.g. a
+// Promise.all([getTimeEntries(ctx), getProjects(ctx)]) call from report.ts or
+// the TUI's loadState) must await one in-flight refresh instead of each
+// triggering their own /me call and their own (mutually-clobbering) rate
+// limiter write. Keyed by cacheDir since that uniquely identifies "this app's
+// cache instance" for a given user.
+const inFlightRefreshes = new Map<string, Promise<RefreshResult>>();
+
+async function performRefresh(ctx: SyncContext): Promise<RefreshResult> {
   const now = ctx.now();
   const rlState = (await readJson<RateLimiterState>(rateLimitFile(ctx))) ?? { timestamps: [] };
   if (!canSpend(rlState, now, ctx.budgetPerHour)) return null;
@@ -42,6 +50,18 @@ export async function refreshAll(
   await writeCacheEntry(projectsFile(ctx), projects, now);
   await writeCacheEntry(timeEntriesFile(ctx), timeEntries, now);
   return { projects, timeEntries };
+}
+
+export function refreshAll(ctx: SyncContext): Promise<RefreshResult> {
+  const key = ctx.cacheDir;
+  const existing = inFlightRefreshes.get(key);
+  if (existing) return existing;
+
+  const promise = performRefresh(ctx).finally(() => {
+    inFlightRefreshes.delete(key);
+  });
+  inFlightRefreshes.set(key, promise);
+  return promise;
 }
 
 export async function getProjects(ctx: SyncContext): Promise<Project[]> {
