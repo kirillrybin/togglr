@@ -96,7 +96,7 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
         </Box>
       ) : (
         <Box marginTop={1}>
-          <Text dimColor>[j/k] move  [s] stop  [c] continue  [n] new  [e] edit  [d] delete  [r] refresh  [q] quit</Text>
+          <Text dimColor>[j/k/↑/↓] move  [s] stop  [c] continue  [n] new  [e] edit  [d] delete  [r] refresh  [q] quit</Text>
         </Box>
       )}
     </Box>

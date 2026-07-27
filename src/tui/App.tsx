@@ -143,7 +143,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   }, [state?.timer, ctx]);
 
   useInput(
-    async (rawInput) => {
+    async (rawInput, key) => {
       const input = normalizeKey(rawInput);
       if (mode === "confirm-delete" && pendingDelete) {
         if (input === "y") {
@@ -211,8 +211,8 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
         setInputValue(next.description);
         setMode("edit-description");
       } else if (state && state.recentEntries.length > 0) {
-        if (input === "j") setSelectedIndex((i) => Math.min(i + 1, state.recentEntries.length - 1));
-        if (input === "k") setSelectedIndex((i) => Math.max(i - 1, 0));
+        if (input === "j" || key.downArrow) setSelectedIndex((i) => Math.min(i + 1, state.recentEntries.length - 1));
+        if (input === "k" || key.upArrow) setSelectedIndex((i) => Math.max(i - 1, 0));
       }
     },
     { isActive: mode === "dashboard" || mode === "confirm-delete" }

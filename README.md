@@ -91,7 +91,7 @@ highlight (`↑ N more` / `↓ N more` indicate what's scrolled off-screen).
 | `n` | Start a new timer (opens an inline description prompt) |
 | `e` | Edit the highlighted entry (description → start → end → project, one prompt per field) |
 | `d` | Delete the highlighted entry (asks for `y`/`n` confirmation first) |
-| `j` / `k` | Move the highlight up/down the recent-entries list |
+| `j` / `k` or `↓` / `↑` | Move the highlight up/down the recent-entries list |
 | `r` | Force refresh (bypasses the cache TTL and rate-limit budget for one call) |
 | `q` | Quit |
 | `Esc` `Esc` | Quit (press twice quickly — works from anywhere, including mid-wizard) |
