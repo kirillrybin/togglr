@@ -6,6 +6,7 @@ import { readTimer } from "../cache/timerState.js";
 import { runStop } from "../commands/stop.js";
 import { createTimer } from "../commands/start.js";
 import { runDeleteEntry } from "../commands/deleteEntry.js";
+import { normalizeKey } from "./keymap.js";
 import { resolveRange } from "../commands/report.js";
 import { aggregateReport } from "../domain/report.js";
 import type { Config } from "../config/config.js";
@@ -110,7 +111,8 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   }, [state?.timer, ctx]);
 
   useInput(
-    async (input) => {
+    async (rawInput) => {
+      const input = normalizeKey(rawInput);
       if (mode === "confirm-delete" && pendingDelete) {
         if (input === "y") {
           const { entryId } = pendingDelete;
