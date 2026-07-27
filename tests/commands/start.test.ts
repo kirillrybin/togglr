@@ -2,9 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { existsSync } from "node:fs";
 import { runStart, createTimer } from "../../src/commands/start.js";
 import { readTimer } from "../../src/cache/timerState.js";
-import { readJson } from "../../src/cache/store.js";
+import { readJson, writeCacheEntry } from "../../src/cache/store.js";
 import type { RateLimiterState } from "../../src/cache/rateLimiter.js";
 import type { SyncContext } from "../../src/cache/sync.js";
 import type { Config } from "../../src/config/config.js";
@@ -34,6 +35,21 @@ describe("commands/start", () => {
 
     expect(timer.entryId).toBe(1);
     expect(await readTimer(dir)).toEqual(timer);
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("createTimer invalidates the cached time entries list, so the new entry isn't hidden until the TTL expires", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "togglr-start-test-"));
+    await writeCacheEntry(join(dir, "time_entries.json"), [], new Date("2026-07-26T11:59:00Z"));
+    const createTimeEntry = vi.fn().mockResolvedValue({
+      id: 1, description: "Coding", project_id: null, workspace_id: 9,
+      start: "2026-07-26T12:00:00Z", stop: null, duration: -1, tags: [],
+    });
+    const ctx = makeCtx(dir, { createTimeEntry });
+
+    await createTimer(ctx, config, "Coding", undefined);
+
+    expect(existsSync(join(dir, "time_entries.json"))).toBe(false);
     rmSync(dir, { recursive: true, force: true });
   });
 

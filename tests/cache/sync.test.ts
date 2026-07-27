@@ -230,6 +230,31 @@ describe("cache/sync", () => {
     });
   });
 
+  it("corrects a running timer's start time on a real refresh, even though its entryId didn't change", async () => {
+    // Same entry, but its start drifted from what's cached locally (e.g. it
+    // was edited elsewhere). Comparing only entryId would wrongly treat this
+    // as "nothing to reconcile" and leave the stale start stuck forever.
+    await writeTimer(dir, {
+      entryId: 42, description: "Coding", projectId: null, workspaceId: 9,
+      startedAt: "2026-07-26T09:00:00Z",
+    });
+    const getMe = vi.fn().mockResolvedValue({
+      id: 1, default_workspace_id: 9, projects: [],
+      time_entries: [{
+        id: 42, description: "Coding", project_id: null, workspace_id: 9,
+        start: "2026-07-26T08:00:00Z", stop: null, duration: -1721981000, tags: [],
+      }],
+    } satisfies TogglMeResponse);
+    const ctx = makeCtx({ getMe }, dir);
+
+    await getTimeEntries(ctx);
+
+    expect(await readTimer(dir)).toEqual({
+      entryId: 42, description: "Coding", projectId: null, workspaceId: 9,
+      startedAt: "2026-07-26T08:00:00Z",
+    });
+  });
+
   it("recordSpend appends a timestamp to rate_limit.json", async () => {
     const getMe = vi.fn();
     const ctx = makeCtx({ getMe }, dir);

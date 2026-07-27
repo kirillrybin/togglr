@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { SyncContext } from "../cache/sync.js";
 import { getProjects, recordSpend } from "../cache/sync.js";
 import { readTimer, writeTimer } from "../cache/timerState.js";
@@ -37,6 +39,10 @@ export async function createTimer(
     startedAt: raw.start,
   };
   await writeTimer(ctx.cacheDir, timer);
+  // Otherwise the recent-entries list (and anything else reading
+  // time_entries.json) keeps serving the pre-start snapshot until the 5-minute
+  // TTL happens to expire — the new entry just silently doesn't show up yet.
+  await fs.rm(path.join(ctx.cacheDir, "time_entries.json"), { force: true });
   return timer;
 }
 

@@ -86,13 +86,13 @@ async function performRefresh(ctx: SyncContext, force: boolean): Promise<Refresh
   await writeCacheEntry(timeEntriesFile(ctx), timeEntries, now);
 
   // We already have fresh truth from Toggl at zero extra API cost — use it to
-  // self-heal timer.json if it silently diverged (started/stopped/deleted via
-  // another client) instead of waiting for a mutation to fail against it.
-  const localTimer = await readTimer(ctx.cacheDir);
-  const reconciled = reconcileTimer(localTimer, timeEntries);
-  if (reconciled?.entryId !== localTimer?.entryId) {
-    await writeTimer(ctx.cacheDir, reconciled);
-  }
+  // self-heal timer.json if it silently diverged (started/stopped/deleted, or
+  // had one of its fields — e.g. start time — changed via another client)
+  // instead of waiting for a mutation to fail against it. Written
+  // unconditionally: comparing only entryId would miss a same-entry field
+  // change (like an edited start time) and leave it stuck forever.
+  const reconciled = reconcileTimer(await readTimer(ctx.cacheDir), timeEntries);
+  await writeTimer(ctx.cacheDir, reconciled);
 
   return { ok: true, projects, timeEntries };
 }

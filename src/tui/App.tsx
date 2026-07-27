@@ -3,6 +3,7 @@ import { render, useInput, useApp } from "ink";
 import type { SyncContext } from "../cache/sync.js";
 import { getProjects, getTimeEntries } from "../cache/sync.js";
 import { readTimer } from "../cache/timerState.js";
+import { reconcileTimer } from "../domain/reconcileTimer.js";
 import { runStop } from "../commands/stop.js";
 import { createTimer } from "../commands/start.js";
 import { runDeleteEntry } from "../commands/deleteEntry.js";
@@ -41,13 +42,20 @@ const EMPTY_STATE: LoadedState = {
 // Exported for tests: this is where a degraded read becomes the `stale` flag
 // the Dashboard renders, and where a running entry gets its live duration.
 export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}): Promise<LoadedState> {
-  const [timer, entriesResult, projectsResult] = await Promise.all([
+  const [localTimer, entriesResult, projectsResult] = await Promise.all([
     readTimer(ctx.cacheDir),
     getTimeEntries(ctx, opts),
     getProjects(ctx, opts),
   ]);
   const entries = entriesResult.data;
   const projects = projectsResult.data;
+  // Derive the header's timer from the same entries this read just resolved,
+  // instead of the separately-cached timer.json — otherwise the header and
+  // the recent-entries list (which already uses this same entries data) can
+  // silently disagree whenever timer.json falls behind. Only fall back to
+  // the local file on a degraded (stale/offline) read, where `entries` may
+  // be missing a timer started since the last successful fetch.
+  const timer = entriesResult.degraded === null ? reconcileTimer(null, entries) : localTimer;
   const now = ctx.now();
   const today = resolveRange("today", now);
   const week = resolveRange("week", now);
@@ -89,7 +97,10 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
     process.exit(0);
   }, [exit]);
   const [state, setState] = useState<LoadedState | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  // A counter that only exists to force a re-render once a second — elapsed
+  // time itself is computed fresh below, not stored, so it's never one tick
+  // stale (e.g. showing 00:00:00 for the first second after a timer appears).
+  const [tick, setTick] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
   type Mode =
     | "dashboard"
@@ -136,13 +147,13 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   }, [refresh]);
 
   useEffect(() => {
-    const tick = setInterval(() => {
-      if (state?.timer) {
-        setElapsedSeconds(Math.floor((ctx.now().getTime() - new Date(state.timer.startedAt).getTime()) / 1000));
-      }
-    }, TICK_INTERVAL_MS);
-    return () => clearInterval(tick);
-  }, [state?.timer, ctx]);
+    const interval = setInterval(() => setTick((t) => t + 1), TICK_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
+  void tick; // read only to force the re-render below to recompute elapsedSeconds
+  const elapsedSeconds = state?.timer
+    ? Math.floor((ctx.now().getTime() - new Date(state.timer.startedAt).getTime()) / 1000)
+    : 0;
 
   useInput(
     async (rawInput, key) => {
