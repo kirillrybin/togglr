@@ -20,6 +20,9 @@ npm install -g @kirillrybin/togglr
 ```
 
 This gives you both `toggl` and `togglr` commands (they're equivalent).
+**The `-g` flag is required** — without it, npm installs the package into
+the local `node_modules` instead of putting a command on your `PATH`, and
+`toggl`/`togglr` won't be found by your shell.
 
 Requires Node.js ≥ 18.
 
