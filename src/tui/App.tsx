@@ -53,6 +53,7 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
   const week = resolveRange("week", now);
   const todaySummary = aggregateReport(entries, projects, today.from, today.to, now);
   const weekSummary = aggregateReport(entries, projects, week.from, week.to, now);
+  const projectNameById = new Map(projects.map((p) => [p.id, p.name]));
   const recentEntries: RecentEntryView[] = [...entries]
     .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime())
     .slice(0, RECENT_ENTRIES_COUNT)
@@ -63,6 +64,7 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
       // time (same rule aggregateReport uses) instead of rendering 00:00:00.
       totalSeconds: e.durationSeconds ?? (now.getTime() - new Date(e.start).getTime()) / 1000,
       projectId: e.projectId,
+      projectName: e.projectId !== null ? (projectNameById.get(e.projectId) ?? null) : null,
       start: e.start,
       stop: e.stop,
     }));

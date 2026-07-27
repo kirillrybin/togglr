@@ -9,6 +9,7 @@ export interface RecentEntryView {
   description: string;
   totalSeconds: number;
   projectId: number | null;
+  projectName: string | null;
   start: string;
   stop: string | null;
 }
@@ -70,7 +71,8 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
               {start > 0 && <Text dimColor>↑ {start} more</Text>}
               {props.recentEntries.slice(start, end).map((entry, i) => (
                 <Text key={start + i} inverse={start + i === props.selectedIndex}>
-                  {entry.description} — {formatDuration(entry.totalSeconds)}
+                  {entry.description}
+                  {entry.projectName ? ` [${entry.projectName}]` : ""} — {formatDuration(entry.totalSeconds)}
                 </Text>
               ))}
               {end < props.recentEntries.length && (

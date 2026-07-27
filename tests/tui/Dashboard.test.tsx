@@ -11,6 +11,7 @@ function makeEntries(count: number): RecentEntryView[] {
     description: `Entry ${i}`,
     totalSeconds: 60,
     projectId: null,
+    projectName: null,
     start: "2026-07-26T11:00:00Z",
     stop: "2026-07-26T11:01:00Z",
   }));
@@ -66,7 +67,7 @@ describe("Dashboard", () => {
         elapsedSeconds={2537}
         todayTotalSeconds={11520}
         weekTotalSeconds={50700}
-        recentEntries={[{ entryId: 2, description: "Standup", totalSeconds: 900, projectId: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:15:00Z" }]}
+        recentEntries={[{ entryId: 2, description: "Standup", totalSeconds: 900, projectId: 5, projectName: "Website", start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:15:00Z" }]}
         stale={false}
         selectedIndex={0}
         inputMode={false}
@@ -81,6 +82,24 @@ describe("Dashboard", () => {
     expect(frame).toContain("Coding on togglr");
     expect(frame).toContain("00:42:17");
     expect(frame).toContain("Standup");
+    expect(frame).toContain("[Website]");
+  });
+
+  it("shows no project marker when a recent entry has no project", () => {
+    const { lastFrame } = render(
+      <Dashboard
+        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z" }]}
+        stale={false} selectedIndex={0}
+        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription={null}
+      />
+    );
+    const frame = lastFrame() ?? "";
+    // No "[ProjectName]" marker inserted between the description and the
+    // duration when there's no project (the footer hint has its own
+    // brackets, so check the entry's own line specifically).
+    expect(frame).toContain("Misc — 00:01:00");
   });
 
   it("shows a stale indicator when the cache could not be refreshed", () => {

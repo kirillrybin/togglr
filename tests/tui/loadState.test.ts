@@ -82,6 +82,43 @@ describe("tui loadState", () => {
     expect(state.recentEntries[0].totalSeconds).toBe(1800);
   });
 
+  it("resolves the project name for a recent entry from the cached projects list", async () => {
+    await writeCacheEntry(join(dir, "projects.json"), [
+      { id: 5, name: "Website", color: "#fff", workspaceId: 9 },
+    ], SYNCED_AT);
+    await writeCacheEntry(join(dir, "time_entries.json"), [
+      {
+        id: 1, description: "Coding", projectId: 5, workspaceId: 9,
+        start: "2026-07-26T11:30:00Z", stop: "2026-07-26T11:45:00Z", durationSeconds: 900, tags: [],
+      },
+    ], SYNCED_AT);
+    const getMe = vi.fn().mockRejectedValue(new Error("offline"));
+
+    const state = await loadState(makeCtx(dir, getMe));
+
+    expect(state.recentEntries[0].projectName).toBe("Website");
+  });
+
+  it("uses null projectName for an entry with no project, or one missing from the cache", async () => {
+    await writeCacheEntry(join(dir, "projects.json"), [], SYNCED_AT);
+    await writeCacheEntry(join(dir, "time_entries.json"), [
+      {
+        id: 1, description: "No project", projectId: null, workspaceId: 9,
+        start: "2026-07-26T11:30:00Z", stop: "2026-07-26T11:45:00Z", durationSeconds: 900, tags: [],
+      },
+      {
+        id: 2, description: "Unknown project", projectId: 999, workspaceId: 9,
+        start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:15:00Z", durationSeconds: 900, tags: [],
+      },
+    ], SYNCED_AT);
+    const getMe = vi.fn().mockRejectedValue(new Error("offline"));
+
+    const state = await loadState(makeCtx(dir, getMe));
+
+    expect(state.recentEntries.find((e) => e.entryId === 1)?.projectName).toBeNull();
+    expect(state.recentEntries.find((e) => e.entryId === 2)?.projectName).toBeNull();
+  });
+
   it("forwards force:true to the sync layer, bypassing a fresh cache and an empty budget", async () => {
     // Written "now" so both caches are unambiguously fresh.
     await writeCacheEntry(join(dir, "projects.json"), [], NOW);
