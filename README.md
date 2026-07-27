@@ -81,17 +81,18 @@ toggl
 
 Running `toggl` with no arguments opens a live dashboard: the current
 timer, a today/week summary, and recent entries (shown as
-`description [project] — duration`, project omitted when there isn't one).
-Up to 20 recent entries are kept, displayed through a scrolling 5-row
-window that follows the highlight (`↑ N more` / `↓ N more` indicate what's
-scrolled off-screen).
+`description [project] — duration (start–end)`, project omitted when
+there isn't one, and the `(start–end)` range omitted for the still-running
+entry, which has no end yet). Up to 20 recent entries are kept, displayed
+through a scrolling 5-row window that follows the highlight (`↑ N more` /
+`↓ N more` indicate what's scrolled off-screen).
 
 | Key | Action |
 |---|---|
 | `s` | Stop the running timer |
 | `c` | Continue the highlighted entry |
 | `n` | Start a new timer (opens an inline description prompt) |
-| `e` | Edit the highlighted entry (description → start → end → project, one prompt per field) |
+| `e` | Edit the highlighted entry (description → start → end → project, one prompt per field). On the running entry — which has no end yet — this just prompts for a new start time |
 | `d` | Delete the highlighted entry (asks for `y`/`n` confirmation first) |
 | `j` / `k` or `↓` / `↑` | Move the highlight up/down the recent-entries list |
 | `r` | Force refresh (bypasses the cache TTL and rate-limit budget for one call) |

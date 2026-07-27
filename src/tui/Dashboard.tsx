@@ -3,6 +3,7 @@ import { Box, Text } from "ink";
 import TextInput from "ink-text-input";
 import type { Timer } from "../domain/models.js";
 import { formatDuration } from "../commands/status.js";
+import { formatTimeHHMM } from "../commands/add.js";
 
 export interface RecentEntryView {
   entryId: number;
@@ -73,6 +74,7 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
                 <Text key={start + i} inverse={start + i === props.selectedIndex}>
                   {entry.description}
                   {entry.projectName ? ` [${entry.projectName}]` : ""} — {formatDuration(entry.totalSeconds)}
+                  {entry.stop !== null ? ` (${formatTimeHHMM(entry.start)}–${formatTimeHHMM(entry.stop)})` : ""}
                 </Text>
               ))}
               {end < props.recentEntries.length && (

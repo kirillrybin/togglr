@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render } from "ink-testing-library";
 import React from "react";
 import { Dashboard, computeVisibleWindow, type RecentEntryView } from "../../src/tui/Dashboard.js";
+import { formatTimeHHMM } from "../../src/commands/add.js";
 
 const noop = () => {};
 
@@ -83,6 +84,7 @@ describe("Dashboard", () => {
     expect(frame).toContain("00:42:17");
     expect(frame).toContain("Standup");
     expect(frame).toContain("[Website]");
+    expect(frame).toContain(`(${formatTimeHHMM("2026-07-26T11:00:00Z")}–${formatTimeHHMM("2026-07-26T11:15:00Z")})`);
   });
 
   it("shows no project marker when a recent entry has no project", () => {
