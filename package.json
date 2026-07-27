@@ -1,18 +1,33 @@
 {
   "name": "@kirillrybin/togglr",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A CLI + terminal UI for Toggl Track, built to stay well under the API rate limit",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kirillrybin/togglr.git"
   },
-  "keywords": ["toggl", "toggl-track", "time-tracking", "cli", "tui"],
+  "keywords": [
+    "toggl",
+    "toggl-track",
+    "time-tracking",
+    "cli",
+    "tui"
+  ],
   "type": "module",
-  "publishConfig": { "access": "public" },
-  "engines": { "node": ">=18" },
-  "bin": { "toggl": "dist/cli.js", "togglr": "dist/cli.js" },
-  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "toggl": "dist/cli.js",
+    "togglr": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
