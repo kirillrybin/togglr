@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { render, useInput, useApp } from "ink";
 import type { SyncContext } from "../cache/sync.js";
 import { getProjects, getTimeEntries } from "../cache/sync.js";
@@ -17,6 +17,7 @@ import { Dashboard, type RecentEntryView } from "./Dashboard.js";
 
 const REFRESH_INTERVAL_MS = 30_000;
 const TICK_INTERVAL_MS = 1000;
+const DOUBLE_ESCAPE_WINDOW_MS = 600;
 
 export interface LoadedState {
   timer: Timer | null;
@@ -76,6 +77,14 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
 
 function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.ReactElement {
   const { exit } = useApp();
+  // Ink's exit() only unmounts the UI and restores the terminal (raw mode
+  // off, cursor back) — it does NOT stop the Node process. Our own
+  // setInterval polls (refresh/tick) keep the event loop alive, so without
+  // an explicit process.exit() the process just hangs after "quitting".
+  const quit = useCallback(() => {
+    exit();
+    process.exit(0);
+  }, [exit]);
   const [state, setState] = useState<LoadedState | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -153,7 +162,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
         return;
       }
       if (input === "q") {
-        exit();
+        quit();
       } else if (input === "s" && state?.timer) {
         try {
           await runStop(ctx, config);
@@ -206,6 +215,24 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       }
     },
     { isActive: mode === "dashboard" || mode === "confirm-delete" }
+  );
+
+  // Always active (regardless of mode) so Escape-Escape works as an
+  // emergency exit even from deep inside a wizard that has no other way
+  // out. A single Escape does nothing — this is deliberately a distinct
+  // gesture from 'q', not a cancel-current-step action.
+  const lastEscapeAt = useRef(0);
+  useInput(
+    (_input, key) => {
+      if (!key.escape) return;
+      const now = Date.now();
+      if (now - lastEscapeAt.current < DOUBLE_ESCAPE_WINDOW_MS) {
+        quit();
+      } else {
+        lastEscapeAt.current = now;
+      }
+    },
+    { isActive: true }
   );
 
   const handleNewTimerSubmit = useCallback(

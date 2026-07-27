@@ -92,6 +92,7 @@ timer, a today/week summary, and recent entries.
 | `j` / `k` | Move the highlight up/down the recent-entries list |
 | `r` | Force refresh (bypasses the cache TTL and rate-limit budget for one call) |
 | `q` | Quit |
+| `Esc` `Esc` | Quit (press twice quickly — works from anywhere, including mid-wizard) |
 
 ## Caching & rate limits
 
