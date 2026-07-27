@@ -16,18 +16,28 @@ with a notice) if the budget is exhausted or the network is down.
 ## Install
 
 ```bash
+npm install -g @kirillrybin/togglr
+```
+
+This gives you both `toggl` and `togglr` commands (they're equivalent).
+
+Requires Node.js ≥ 18.
+
+### From source
+
+```bash
+git clone https://github.com/kirillrybin/togglr.git
+cd togglr
 npm install
 npm run build
 ```
 
 This produces `dist/cli.js`. Run it directly with `node dist/cli.js`, or
-link it as a `toggl` binary:
+link it as local `toggl`/`togglr` binaries:
 
 ```bash
 npm link
 ```
-
-Requires Node.js ≥ 18.
 
 ## First run
 
