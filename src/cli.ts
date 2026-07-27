@@ -10,6 +10,8 @@ import { runListProjects } from "./commands/listProjects.js";
 import { runContinue } from "./commands/continueLast.js";
 import { runReport, type ReportRange } from "./commands/report.js";
 import type { DegradedReason } from "./cache/sync.js";
+import { getCacheDir } from "./cache/paths.js";
+import { checkForUpdate, getCurrentVersion } from "./updateCheck.js";
 
 const program = new Command();
 program.name("toggl");
@@ -118,8 +120,9 @@ program
   });
 
 async function main() {
+  const isTui = process.argv.length <= 2;
   try {
-    if (process.argv.length <= 2) {
+    if (isTui) {
       const { renderDashboard } = await import("./tui/App.js");
       const { ctx, config } = await buildContext();
       renderDashboard(ctx, config);
@@ -129,6 +132,13 @@ async function main() {
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
+  }
+  // Skipped for the TUI: it's a long-running interactive session where an
+  // extra stderr write would land awkwardly under Ink's own rendering.
+  // Skipped outside a real terminal (CI, scripts, piped output) so this
+  // never pollutes non-interactive usage.
+  if (!isTui && process.stderr.isTTY) {
+    await checkForUpdate(getCacheDir(), await getCurrentVersion());
   }
 }
 

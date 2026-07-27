@@ -94,6 +94,14 @@ timer, a today/week summary, and recent entries.
 | `q` | Quit |
 | `Esc` `Esc` | Quit (press twice quickly — works from anywhere, including mid-wizard) |
 
+## Update notifications
+
+After a one-shot command finishes (not the TUI, and only in an interactive
+terminal), togglr checks npm for a newer published version — at most once a
+day — and prints a short reminder if one exists. This never touches your
+Toggl API rate-limit budget; it's a separate, throttled check against the
+npm registry.
+
 ## Caching & rate limits
 
 | Cache file | TTL | Notes |
@@ -102,6 +110,7 @@ timer, a today/week summary, and recent entries.
 | `~/.cache/togglr/time_entries.json` | 5 minutes | Invalidated after `stop` |
 | `~/.cache/togglr/timer.json` | — | Local source of truth for the active timer, not TTL-based |
 | `~/.cache/togglr/rate_limit.json` | — | Rolling 1-hour log of API calls, used to enforce the 25/hour budget |
+| `~/.cache/togglr/update_check.json` | 24 hours | Last npm version check, unrelated to the Toggl budget |
 
 Both `projects.json` and `time_entries.json` are refreshed together from a
 single Toggl `/me` call whenever either goes stale, keeping API usage to a
