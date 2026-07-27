@@ -85,7 +85,9 @@ timer, a today/week summary, and recent entries (shown as
 there isn't one, and the `(start–end)` range omitted for the still-running
 entry, which has no end yet). Up to 20 recent entries are kept, displayed
 through a scrolling 5-row window that follows the highlight (`↑ N more` /
-`↓ N more` indicate what's scrolled off-screen).
+`↓ N more` indicate what's scrolled off-screen). The dashboard runs in the
+terminal's alternate screen buffer (like `vim`/`htop`), so it fully
+disappears on exit instead of leaving its last frame in your shell.
 
 | Key | Action |
 |---|---|

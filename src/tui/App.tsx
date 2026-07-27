@@ -376,6 +376,18 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   );
 }
 
+// Ink draws into the normal scrollback by default, so the last frame stays
+// printed in the shell after quitting. The alternate screen buffer (the same
+// mechanism vim/htop/less use) makes the dashboard fully replace the terminal
+// while running and fully disappear on exit, restoring whatever was there
+// before. Restoring is registered on process "exit" (not just in `quit()`) so
+// the terminal isn't left stuck on the alt screen if the process ever exits
+// some other way (an uncaught error's process.exit(1), etc).
+const ENTER_ALT_SCREEN = "\x1b[?1049h";
+const EXIT_ALT_SCREEN = "\x1b[?1049l";
+
 export function renderDashboard(ctx: SyncContext, config: Config): void {
+  process.stdout.write(ENTER_ALT_SCREEN);
+  process.on("exit", () => process.stdout.write(EXIT_ALT_SCREEN));
   render(<App ctx={ctx} config={config} />);
 }
