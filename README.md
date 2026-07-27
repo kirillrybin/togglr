@@ -80,7 +80,9 @@ toggl
 ### TUI dashboard
 
 Running `toggl` with no arguments opens a live dashboard: the current
-timer, a today/week summary, and recent entries.
+timer, a today/week summary, and recent entries. Up to 20 recent entries are
+kept, displayed through a scrolling 5-row window that follows the
+highlight (`↑ N more` / `↓ N more` indicate what's scrolled off-screen).
 
 | Key | Action |
 |---|---|

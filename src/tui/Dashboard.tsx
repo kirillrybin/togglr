@@ -13,6 +13,19 @@ export interface RecentEntryView {
   stop: string | null;
 }
 
+const VISIBLE_ENTRY_COUNT = 5;
+
+export function computeVisibleWindow(
+  total: number,
+  selectedIndex: number,
+  visibleCount: number
+): { start: number; end: number } {
+  if (total <= visibleCount) return { start: 0, end: total };
+  const half = Math.floor(visibleCount / 2);
+  const start = Math.max(0, Math.min(selectedIndex - half, total - visibleCount));
+  return { start, end: start + visibleCount };
+}
+
 export interface DashboardProps {
   timer: Timer | null;
   elapsedSeconds: number;
@@ -46,11 +59,26 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
       <Box marginTop={1} flexDirection="column">
         <Text underline>Recent entries</Text>
         {props.recentEntries.length === 0 && <Text dimColor>No recent entries</Text>}
-        {props.recentEntries.map((entry, i) => (
-          <Text key={i} inverse={i === props.selectedIndex}>
-            {entry.description} — {formatDuration(entry.totalSeconds)}
-          </Text>
-        ))}
+        {(() => {
+          const { start, end } = computeVisibleWindow(
+            props.recentEntries.length,
+            props.selectedIndex,
+            VISIBLE_ENTRY_COUNT
+          );
+          return (
+            <>
+              {start > 0 && <Text dimColor>↑ {start} more</Text>}
+              {props.recentEntries.slice(start, end).map((entry, i) => (
+                <Text key={start + i} inverse={start + i === props.selectedIndex}>
+                  {entry.description} — {formatDuration(entry.totalSeconds)}
+                </Text>
+              ))}
+              {end < props.recentEntries.length && (
+                <Text dimColor>↓ {props.recentEntries.length - end} more</Text>
+              )}
+            </>
+          );
+        })()}
       </Box>
       {props.stale && (
         <Box marginTop={1}>

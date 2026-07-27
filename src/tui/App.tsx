@@ -18,6 +18,7 @@ import { Dashboard, type RecentEntryView } from "./Dashboard.js";
 const REFRESH_INTERVAL_MS = 30_000;
 const TICK_INTERVAL_MS = 1000;
 const DOUBLE_ESCAPE_WINDOW_MS = 600;
+const RECENT_ENTRIES_COUNT = 20;
 
 export interface LoadedState {
   timer: Timer | null;
@@ -54,7 +55,7 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
   const weekSummary = aggregateReport(entries, projects, week.from, week.to, now);
   const recentEntries: RecentEntryView[] = [...entries]
     .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime())
-    .slice(0, 5)
+    .slice(0, RECENT_ENTRIES_COUNT)
     .map((e) => ({
       entryId: e.id,
       description: e.description,
