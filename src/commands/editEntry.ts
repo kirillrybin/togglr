@@ -5,6 +5,7 @@ import { getProjects, recordSpend } from "../cache/sync.js";
 import { mapTimeEntry } from "../domain/mappers.js";
 import type { TimeEntry } from "../domain/models.js";
 import type { Config } from "../config/config.js";
+import { readTimer, writeTimer } from "../cache/timerState.js";
 import { parseTimeToday } from "./add.js";
 
 export interface EditOptions {
@@ -21,16 +22,14 @@ export async function runEditEntry(
   entryId: number,
   opts: EditOptions
 ): Promise<TimeEntry> {
-  if (Boolean(opts.start) !== Boolean(opts.end)) {
-    throw new Error("Both --start and --end must be given together to change the time.");
-  }
   if (
     opts.description === undefined &&
     opts.projectName === undefined &&
     opts.tags === undefined &&
-    opts.start === undefined
+    opts.start === undefined &&
+    opts.end === undefined
   ) {
-    throw new Error("Nothing to edit: pass at least one of description/project/start+end/tags.");
+    throw new Error("Nothing to edit: pass at least one of description/project/start/end/tags.");
   }
 
   let projectId: number | undefined;
@@ -43,17 +42,14 @@ export async function runEditEntry(
     projectId = match.id;
   }
 
-  let start: string | undefined;
-  let stop: string | undefined;
-  if (opts.start && opts.end) {
-    const now = ctx.now();
-    const startDate = parseTimeToday(opts.start, now);
-    const endDate = parseTimeToday(opts.end, now);
-    if (endDate <= startDate) {
-      throw new Error(`End time (${opts.end}) must be after start time (${opts.start}).`);
-    }
-    start = startDate.toISOString();
-    stop = endDate.toISOString();
+  // start and end can each be given independently — e.g. nudging just the
+  // start time of a still-running entry (which has no end yet). Only when
+  // both are given do we cross-check ordering.
+  const now = ctx.now();
+  const start = opts.start ? parseTimeToday(opts.start, now).toISOString() : undefined;
+  const stop = opts.end ? parseTimeToday(opts.end, now).toISOString() : undefined;
+  if (start && stop && new Date(stop) <= new Date(start)) {
+    throw new Error(`End time (${opts.end}) must be after start time (${opts.start}).`);
   }
 
   const raw = await ctx.client.updateTimeEntry(config.workspaceId, entryId, {
@@ -68,5 +64,21 @@ export async function runEditEntry(
   await recordSpend(ctx);
   await fs.rm(path.join(ctx.cacheDir, "time_entries.json"), { force: true });
 
-  return mapTimeEntry(raw);
+  const entry = mapTimeEntry(raw);
+  // If this was the running timer, timer.json needs to reflect the change
+  // immediately — waiting for the next refresh's reconciliation would leave
+  // the dashboard showing the pre-edit start (and a wrong elapsed time) for
+  // up to REFRESH_INTERVAL_MS.
+  const localTimer = await readTimer(ctx.cacheDir);
+  if (localTimer?.entryId === entryId && entry.durationSeconds === null) {
+    await writeTimer(ctx.cacheDir, {
+      entryId: entry.id,
+      description: entry.description,
+      projectId: entry.projectId,
+      workspaceId: entry.workspaceId,
+      startedAt: entry.start,
+    });
+  }
+
+  return entry;
 }

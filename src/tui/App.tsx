@@ -109,7 +109,8 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
     | "edit-description"
     | "edit-start"
     | "edit-end"
-    | "edit-project";
+    | "edit-project"
+    | "edit-running-start";
   const [mode, setMode] = useState<Mode>("dashboard");
   const [inputValue, setInputValue] = useState("");
   const [pendingDelete, setPendingDelete] = useState<{ entryId: number; description: string } | null>(null);
@@ -120,6 +121,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
     end: string;
     projectName: string;
   } | null>(null);
+  const [pendingRunningEdit, setPendingRunningEdit] = useState<{ entryId: number } | null>(null);
 
   const refresh = useCallback(
     async (opts: { force?: boolean } = {}) => {
@@ -206,8 +208,11 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       } else if (input === "e" && state?.recentEntries[selectedIndex]) {
         const entry = state.recentEntries[selectedIndex];
         if (entry.stop === null) {
-          // A still-running entry has no end time to edit — stop it first.
-          console.error("Can't edit a running entry. Stop it first.");
+          // A running entry has no end time yet, so the full 4-step wizard
+          // doesn't apply — only its start time can be nudged.
+          setPendingRunningEdit({ entryId: entry.entryId });
+          setInputValue(formatTimeHHMM(entry.start));
+          setMode("edit-running-start");
           return;
         }
         const projectName = entry.projectId !== null
@@ -324,12 +329,29 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
     [ctx, config, pendingEdit, refresh]
   );
 
+  const handleEditRunningStartSubmit = useCallback(
+    async (value: string) => {
+      if (!pendingRunningEdit) return;
+      const { entryId } = pendingRunningEdit;
+      setPendingRunningEdit(null);
+      setMode("dashboard");
+      try {
+        await runEditEntry(ctx, config, entryId, { start: value });
+      } catch (err) {
+        console.error(err instanceof Error ? err.message : String(err));
+      }
+      await refresh();
+    },
+    [ctx, config, pendingRunningEdit, refresh]
+  );
+
   const INPUT_STEPS: Partial<Record<Mode, { label: string; onSubmit: (value: string) => void | Promise<void> }>> = {
     "new-timer": { label: "New timer", onSubmit: handleNewTimerSubmit },
     "edit-description": { label: "Edit description", onSubmit: handleEditDescriptionSubmit },
     "edit-start": { label: "Edit start (HH:MM)", onSubmit: handleEditStartSubmit },
     "edit-end": { label: "Edit end (HH:MM)", onSubmit: handleEditEndSubmit },
     "edit-project": { label: "Edit project (blank = unchanged)", onSubmit: handleEditProjectSubmit },
+    "edit-running-start": { label: "Edit start (HH:MM)", onSubmit: handleEditRunningStartSubmit },
   };
   const activeInputStep = INPUT_STEPS[mode];
 

@@ -4,9 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runEditEntry } from "../../src/commands/editEntry.js";
 import { readJson } from "../../src/cache/store.js";
+import { writeTimer } from "../../src/cache/timerState.js";
 import type { RateLimiterState } from "../../src/cache/rateLimiter.js";
 import type { SyncContext } from "../../src/cache/sync.js";
 import type { Config } from "../../src/config/config.js";
+import type { Timer } from "../../src/domain/models.js";
 
 function makeCtx(cacheDir: string, client: Partial<SyncContext["client"]>): SyncContext {
   return {
@@ -86,14 +88,59 @@ describe("commands/editEntry", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("throws when only one of start/end is given", async () => {
+  it("changes only the start time when end is omitted", async () => {
     const dir = mkdtempSync(join(tmpdir(), "togglr-edit-test-"));
-    const ctx = makeCtx(dir, {});
+    const updateTimeEntry = vi.fn().mockResolvedValue({
+      id: 5, description: "x", project_id: null, workspace_id: 9,
+      start: "2026-07-26T09:00:00.000Z", stop: "2026-07-26T09:15:00.000Z", duration: 900, tags: [],
+    });
+    const ctx = makeCtx(dir, { updateTimeEntry });
 
-    await expect(runEditEntry(ctx, config, 5, { start: "09:00" }))
-      .rejects.toThrow(/Both --start and --end/);
-    await expect(runEditEntry(ctx, config, 5, { end: "09:00" }))
-      .rejects.toThrow(/Both --start and --end/);
+    await runEditEntry(ctx, config, 5, { start: "09:00" });
+
+    const [, , data] = updateTimeEntry.mock.calls[0];
+    expect(new Date(data.start).getHours()).toBe(9);
+    expect(data.stop).toBeUndefined();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("updates the local running timer's startedAt when its start time is edited", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "togglr-edit-test-"));
+    const runningTimer: Timer = {
+      entryId: 5, description: "Coding", projectId: null, workspaceId: 9,
+      startedAt: "2026-07-26T09:00:00.000Z",
+    };
+    await writeTimer(dir, runningTimer);
+    const updateTimeEntry = vi.fn().mockResolvedValue({
+      id: 5, description: "Coding", project_id: null, workspace_id: 9,
+      start: "2026-07-26T08:30:00.000Z", stop: null, duration: -1, tags: [],
+    });
+    const ctx = makeCtx(dir, { updateTimeEntry });
+
+    await runEditEntry(ctx, config, 5, { start: "08:30" });
+
+    const timer = await readJson<Timer>(join(dir, "timer.json"));
+    expect(timer?.startedAt).toBe("2026-07-26T08:30:00.000Z");
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("does not touch timer.json when the edited entry is not the running one", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "togglr-edit-test-"));
+    const runningTimer: Timer = {
+      entryId: 99, description: "Other", projectId: null, workspaceId: 9,
+      startedAt: "2026-07-26T09:00:00.000Z",
+    };
+    await writeTimer(dir, runningTimer);
+    const updateTimeEntry = vi.fn().mockResolvedValue({
+      id: 5, description: "x", project_id: null, workspace_id: 9,
+      start: "2026-07-26T08:30:00.000Z", stop: "2026-07-26T08:45:00.000Z", duration: 900, tags: [],
+    });
+    const ctx = makeCtx(dir, { updateTimeEntry });
+
+    await runEditEntry(ctx, config, 5, { start: "08:30", end: "08:45" });
+
+    const timer = await readJson<Timer>(join(dir, "timer.json"));
+    expect(timer).toEqual(runningTimer);
     rmSync(dir, { recursive: true, force: true });
   });
 

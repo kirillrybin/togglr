@@ -62,8 +62,8 @@ program
   .command("edit <id>")
   .option("--description <text>")
   .option("--project <name>")
-  .option("--start <HH:MM>", "requires --end together")
-  .option("--end <HH:MM>", "requires --start together")
+  .option("--start <HH:MM>", "change the start time (works on a running entry too)")
+  .option("--end <HH:MM>", "change the end time")
   .option("--tag <name>", "add a tag (repeatable, replaces existing tags)", collectTag, [] as string[])
   .action(async (id: string, opts: { description?: string; project?: string; start?: string; end?: string; tag: string[] }) => {
     const entryId = Number(id);

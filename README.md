@@ -54,7 +54,7 @@ detected automatically.
 ```bash
 toggl start "Coding on togglr" [--project <name>] [--tag <name>]...
 toggl add "Coding on togglr" --start 09:00 --end 11:30 [--project <name>] [--tag <name>]...
-toggl edit <id> [--description <text>] [--project <name>] [--start <HH:MM> --end <HH:MM>] [--tag <name>]...
+toggl edit <id> [--description <text>] [--project <name>] [--start <HH:MM>] [--end <HH:MM>] [--tag <name>]...
 toggl stop
 toggl status
 toggl continue
@@ -69,7 +69,7 @@ toggl
 |---|---|
 | `start "<description>" [--project <name>] [--tag <name>]...` | Start a new timer (`--tag` is repeatable) |
 | `add "<description>" --start <HH:MM> --end <HH:MM> [--project <name>] [--tag <name>]...` | Manually add a completed entry for today (e.g. forgot to track something) |
-| `edit <id> [--description] [--project] [--start --end] [--tag]...` | Edit an existing entry by its Toggl id (only the given fields change) |
+| `edit <id> [--description] [--project] [--start] [--end] [--tag]...` | Edit an existing entry by its Toggl id (only the given fields change; `--start`/`--end` can be given independently, including on a still-running entry) |
 | `stop` | Stop the running timer |
 | `status` | Show the current timer and elapsed time (no network call) |
 | `continue` | Repeat the most recent time entry |
