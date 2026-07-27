@@ -11,7 +11,7 @@
   "type": "module",
   "publishConfig": { "access": "public" },
   "engines": { "node": ">=18" },
-  "bin": { "toggl": "./dist/cli.js", "togglr": "./dist/cli.js" },
+  "bin": { "toggl": "dist/cli.js", "togglr": "dist/cli.js" },
   "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
