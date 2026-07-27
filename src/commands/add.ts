@@ -25,6 +25,11 @@ export function parseTimeToday(hhmm: string, referenceDate: Date): Date {
   return result;
 }
 
+export function formatTimeHHMM(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export async function runAdd(ctx: SyncContext, config: Config, opts: AddOptions): Promise<TimeEntry> {
   const now = ctx.now();
   const start = parseTimeToday(opts.start, now);

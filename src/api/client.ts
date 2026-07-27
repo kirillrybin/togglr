@@ -21,10 +21,19 @@ export interface CreateCompletedTimeEntryData {
   stop: string;
 }
 
+export interface UpdateTimeEntryData {
+  description?: string;
+  project_id?: number;
+  tags?: string[];
+  start?: string;
+  stop?: string;
+}
+
 export interface TogglApiClient {
   getMe(withRelatedData: boolean): Promise<TogglMeResponse>;
   createTimeEntry(workspaceId: number, data: CreateTimeEntryData): Promise<TogglTimeEntryRaw>;
   createCompletedTimeEntry(workspaceId: number, data: CreateCompletedTimeEntryData): Promise<TogglTimeEntryRaw>;
+  updateTimeEntry(workspaceId: number, entryId: number, data: UpdateTimeEntryData): Promise<TogglTimeEntryRaw>;
   stopTimeEntry(workspaceId: number, entryId: number): Promise<TogglTimeEntryRaw>;
   deleteTimeEntry(workspaceId: number, entryId: number): Promise<void>;
 }
@@ -86,6 +95,26 @@ export class TogglClient implements TogglApiClient {
       duration: durationSeconds,
       created_with: "togglr",
     });
+  }
+
+  updateTimeEntry(
+    workspaceId: number,
+    entryId: number,
+    data: UpdateTimeEntryData
+  ): Promise<TogglTimeEntryRaw> {
+    // Confirmed against the real API: PUT here is a genuine partial update —
+    // omitted fields keep their existing server-side value, unlike a typical
+    // REST "PUT replaces the whole resource" contract.
+    const body: Record<string, unknown> = {};
+    if (data.description !== undefined) body.description = data.description;
+    if (data.project_id !== undefined) body.project_id = data.project_id;
+    if (data.tags !== undefined) body.tags = data.tags;
+    if (data.start !== undefined && data.stop !== undefined) {
+      body.start = data.start;
+      body.stop = data.stop;
+      body.duration = Math.round((new Date(data.stop).getTime() - new Date(data.start).getTime()) / 1000);
+    }
+    return this.request("PUT", `/workspaces/${workspaceId}/time_entries/${entryId}`, body);
   }
 
   stopTimeEntry(workspaceId: number, entryId: number): Promise<TogglTimeEntryRaw> {

@@ -6,11 +6,13 @@ import { readTimer } from "../cache/timerState.js";
 import { runStop } from "../commands/stop.js";
 import { createTimer } from "../commands/start.js";
 import { runDeleteEntry } from "../commands/deleteEntry.js";
+import { runEditEntry } from "../commands/editEntry.js";
+import { formatTimeHHMM } from "../commands/add.js";
 import { normalizeKey } from "./keymap.js";
 import { resolveRange } from "../commands/report.js";
 import { aggregateReport } from "../domain/report.js";
 import type { Config } from "../config/config.js";
-import type { Timer } from "../domain/models.js";
+import type { Project, Timer } from "../domain/models.js";
 import { Dashboard, type RecentEntryView } from "./Dashboard.js";
 
 const REFRESH_INTERVAL_MS = 30_000;
@@ -21,6 +23,7 @@ export interface LoadedState {
   todayTotalSeconds: number;
   weekTotalSeconds: number;
   recentEntries: RecentEntryView[];
+  projects: Project[];
   stale: boolean;
 }
 
@@ -29,6 +32,7 @@ const EMPTY_STATE: LoadedState = {
   todayTotalSeconds: 0,
   weekTotalSeconds: 0,
   recentEntries: [],
+  projects: [],
   stale: false,
 };
 
@@ -57,12 +61,15 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
       // time (same rule aggregateReport uses) instead of rendering 00:00:00.
       totalSeconds: e.durationSeconds ?? (now.getTime() - new Date(e.start).getTime()) / 1000,
       projectId: e.projectId,
+      start: e.start,
+      stop: e.stop,
     }));
   return {
     timer,
     todayTotalSeconds: todaySummary.reduce((sum, s) => sum + s.totalSeconds, 0),
     weekTotalSeconds: weekSummary.reduce((sum, s) => sum + s.totalSeconds, 0),
     recentEntries,
+    projects,
     stale: entriesResult.degraded !== null || projectsResult.degraded !== null,
   };
 }
@@ -72,9 +79,24 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   const [state, setState] = useState<LoadedState | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [mode, setMode] = useState<"dashboard" | "new-timer" | "confirm-delete">("dashboard");
+  type Mode =
+    | "dashboard"
+    | "new-timer"
+    | "confirm-delete"
+    | "edit-description"
+    | "edit-start"
+    | "edit-end"
+    | "edit-project";
+  const [mode, setMode] = useState<Mode>("dashboard");
   const [inputValue, setInputValue] = useState("");
   const [pendingDelete, setPendingDelete] = useState<{ entryId: number; description: string } | null>(null);
+  const [pendingEdit, setPendingEdit] = useState<{
+    entryId: number;
+    description: string;
+    start: string;
+    end: string;
+    projectName: string;
+  } | null>(null);
 
   const refresh = useCallback(
     async (opts: { force?: boolean } = {}) => {
@@ -158,6 +180,26 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
         const entry = state.recentEntries[selectedIndex];
         setPendingDelete({ entryId: entry.entryId, description: entry.description });
         setMode("confirm-delete");
+      } else if (input === "e" && state?.recentEntries[selectedIndex]) {
+        const entry = state.recentEntries[selectedIndex];
+        if (entry.stop === null) {
+          // A still-running entry has no end time to edit — stop it first.
+          console.error("Can't edit a running entry. Stop it first.");
+          return;
+        }
+        const projectName = entry.projectId !== null
+          ? (state.projects.find((p) => p.id === entry.projectId)?.name ?? "")
+          : "";
+        const next = {
+          entryId: entry.entryId,
+          description: entry.description,
+          start: formatTimeHHMM(entry.start),
+          end: formatTimeHHMM(entry.stop),
+          projectName,
+        };
+        setPendingEdit(next);
+        setInputValue(next.description);
+        setMode("edit-description");
       } else if (state && state.recentEntries.length > 0) {
         if (input === "j") setSelectedIndex((i) => Math.min(i + 1, state.recentEntries.length - 1));
         if (input === "k") setSelectedIndex((i) => Math.max(i - 1, 0));
@@ -182,6 +224,74 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
     [ctx, config, refresh]
   );
 
+  // The edit flow is a 4-step wizard (description -> start -> end -> project),
+  // reusing the same single-line text prompt for each step. Each step just
+  // stashes its value into pendingEdit and advances; the API call only
+  // happens once, on the final (project) step.
+  const handleEditDescriptionSubmit = useCallback(
+    (value: string) => {
+      if (!pendingEdit) return;
+      const next = { ...pendingEdit, description: value };
+      setPendingEdit(next);
+      setInputValue(next.start);
+      setMode("edit-start");
+    },
+    [pendingEdit]
+  );
+
+  const handleEditStartSubmit = useCallback(
+    (value: string) => {
+      if (!pendingEdit) return;
+      const next = { ...pendingEdit, start: value };
+      setPendingEdit(next);
+      setInputValue(next.end);
+      setMode("edit-end");
+    },
+    [pendingEdit]
+  );
+
+  const handleEditEndSubmit = useCallback(
+    (value: string) => {
+      if (!pendingEdit) return;
+      const next = { ...pendingEdit, end: value };
+      setPendingEdit(next);
+      setInputValue(next.projectName);
+      setMode("edit-project");
+    },
+    [pendingEdit]
+  );
+
+  const handleEditProjectSubmit = useCallback(
+    async (value: string) => {
+      if (!pendingEdit) return;
+      const { entryId, description, start, end } = pendingEdit;
+      const projectName = value.trim();
+      setPendingEdit(null);
+      setMode("dashboard");
+      try {
+        await runEditEntry(ctx, config, entryId, {
+          description,
+          start,
+          end,
+          projectName: projectName || undefined,
+        });
+      } catch (err) {
+        console.error(err instanceof Error ? err.message : String(err));
+      }
+      await refresh();
+    },
+    [ctx, config, pendingEdit, refresh]
+  );
+
+  const INPUT_STEPS: Partial<Record<Mode, { label: string; onSubmit: (value: string) => void | Promise<void> }>> = {
+    "new-timer": { label: "New timer", onSubmit: handleNewTimerSubmit },
+    "edit-description": { label: "Edit description", onSubmit: handleEditDescriptionSubmit },
+    "edit-start": { label: "Edit start (HH:MM)", onSubmit: handleEditStartSubmit },
+    "edit-end": { label: "Edit end (HH:MM)", onSubmit: handleEditEndSubmit },
+    "edit-project": { label: "Edit project (blank = unchanged)", onSubmit: handleEditProjectSubmit },
+  };
+  const activeInputStep = INPUT_STEPS[mode];
+
   const view = state ?? EMPTY_STATE;
 
   return (
@@ -193,10 +303,11 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       recentEntries={view.recentEntries}
       stale={view.stale}
       selectedIndex={selectedIndex}
-      inputMode={mode === "new-timer"}
+      inputMode={activeInputStep !== undefined}
+      inputLabel={activeInputStep?.label ?? ""}
       inputValue={inputValue}
       onInputChange={setInputValue}
-      onInputSubmit={handleNewTimerSubmit}
+      onInputSubmit={activeInputStep?.onSubmit ?? (() => {})}
       confirmDeleteDescription={mode === "confirm-delete" ? (pendingDelete?.description ?? null) : null}
     />
   );

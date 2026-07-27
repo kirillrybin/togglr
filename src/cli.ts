@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { buildContext } from "./bootstrap.js";
 import { runStart } from "./commands/start.js";
 import { runAdd } from "./commands/add.js";
+import { runEditEntry } from "./commands/editEntry.js";
 import { runStop } from "./commands/stop.js";
 import { runStatus, formatDuration } from "./commands/status.js";
 import { runListProjects } from "./commands/listProjects.js";
@@ -53,6 +54,30 @@ program
       tags: opts.tag.length > 0 ? opts.tag : undefined,
     });
     console.log(`Added: ${entry.description} (${formatDuration(entry.durationSeconds ?? 0)})`);
+  });
+
+program
+  .command("edit <id>")
+  .option("--description <text>")
+  .option("--project <name>")
+  .option("--start <HH:MM>", "requires --end together")
+  .option("--end <HH:MM>", "requires --start together")
+  .option("--tag <name>", "add a tag (repeatable, replaces existing tags)", collectTag, [] as string[])
+  .action(async (id: string, opts: { description?: string; project?: string; start?: string; end?: string; tag: string[] }) => {
+    const entryId = Number(id);
+    if (!Number.isInteger(entryId)) {
+      console.error(`Invalid entry id: "${id}"`);
+      process.exit(1);
+    }
+    const { ctx, config } = await buildContext();
+    const entry = await runEditEntry(ctx, config, entryId, {
+      description: opts.description,
+      projectName: opts.project,
+      start: opts.start,
+      end: opts.end,
+      tags: opts.tag.length > 0 ? opts.tag : undefined,
+    });
+    console.log(`Updated: ${entry.description}`);
   });
 
 program.command("stop").action(async () => {

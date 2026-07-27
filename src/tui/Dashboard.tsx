@@ -9,6 +9,8 @@ export interface RecentEntryView {
   description: string;
   totalSeconds: number;
   projectId: number | null;
+  start: string;
+  stop: string | null;
 }
 
 export interface DashboardProps {
@@ -20,6 +22,7 @@ export interface DashboardProps {
   stale: boolean;
   selectedIndex: number;
   inputMode: boolean;
+  inputLabel: string;
   inputValue: string;
   onInputChange: (value: string) => void;
   onInputSubmit: (value: string) => void;
@@ -56,7 +59,7 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
       )}
       {props.inputMode ? (
         <Box marginTop={1}>
-          <Text>New timer: </Text>
+          <Text>{props.inputLabel}: </Text>
           <TextInput value={props.inputValue} onChange={props.onInputChange} onSubmit={props.onInputSubmit} />
         </Box>
       ) : props.confirmDeleteDescription !== null ? (
@@ -65,7 +68,7 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
         </Box>
       ) : (
         <Box marginTop={1}>
-          <Text dimColor>[j/k] move  [s] stop  [c] continue  [n] new  [d] delete  [r] refresh  [q] quit</Text>
+          <Text dimColor>[j/k] move  [s] stop  [c] continue  [n] new  [e] edit  [d] delete  [r] refresh  [q] quit</Text>
         </Box>
       )}
     </Box>

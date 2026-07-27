@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runAdd, parseTimeToday } from "../../src/commands/add.js";
+import { runAdd, parseTimeToday, formatTimeHHMM } from "../../src/commands/add.js";
 import { writeCacheEntry } from "../../src/cache/store.js";
 import type { SyncContext } from "../../src/cache/sync.js";
 import type { Config } from "../../src/config/config.js";
@@ -35,6 +35,13 @@ describe("parseTimeToday", () => {
     expect(() => parseTimeToday("9am", new Date())).toThrow(/Invalid time/);
     expect(() => parseTimeToday("25:00", new Date())).toThrow(/Invalid time/);
     expect(() => parseTimeToday("12:60", new Date())).toThrow(/Invalid time/);
+  });
+});
+
+describe("formatTimeHHMM", () => {
+  it("formats an ISO timestamp as local HH:MM, zero-padded", () => {
+    const local = new Date(2026, 6, 26, 9, 5); // local July 26 2026, 09:05
+    expect(formatTimeHHMM(local.toISOString())).toBe("09:05");
   });
 });
 

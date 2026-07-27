@@ -94,6 +94,37 @@ describe("TogglClient", () => {
     expect(result).toEqual(mockResponse);
   });
 
+  it("sends PUT request to correct URL for updateTimeEntry with only the given fields", async () => {
+    const mockResponse = { id: 5, description: "Renamed", duration: 900 };
+    (fetch as any).mockResolvedValue({ ok: true, status: 200, json: async () => mockResponse });
+    const client = new TogglClient("token");
+
+    const result = await client.updateTimeEntry(999, 5, { description: "Renamed" });
+
+    const [url, init] = (fetch as any).mock.calls[0];
+    expect(url).toContain("/workspaces/999/time_entries/5");
+    expect(init.method).toBe("PUT");
+    const body = JSON.parse(init.body);
+    expect(body).toEqual({ description: "Renamed" }); // project_id/tags/start/stop omitted entirely
+    expect(result).toEqual(mockResponse);
+  });
+
+  it("computes duration and includes start/stop together for updateTimeEntry when both are given", async () => {
+    (fetch as any).mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    const client = new TogglClient("token");
+
+    await client.updateTimeEntry(999, 5, {
+      start: "2026-07-26T09:00:00.000Z",
+      stop: "2026-07-26T09:15:00.000Z",
+    });
+
+    const [, init] = (fetch as any).mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.start).toBe("2026-07-26T09:00:00.000Z");
+    expect(body.stop).toBe("2026-07-26T09:15:00.000Z");
+    expect(body.duration).toBe(900);
+  });
+
   it("sends DELETE request to correct URL for deleteTimeEntry and handles an empty 200 body", async () => {
     (fetch as any).mockResolvedValue({ ok: true, status: 200, json: async () => { throw new Error("no body to parse"); } });
     const client = new TogglClient("token");
