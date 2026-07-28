@@ -1,5 +1,5 @@
 import path from "node:path";
-import fs from "node:fs/promises";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { readJson, writeJson } from "./cache/store.js";
 
@@ -75,9 +75,11 @@ function defaultNotice(current: string, latest: string): void {
 }
 
 // package.json ships alongside dist/ in the published tarball (npm always
-// includes it), one directory up from this compiled file.
-export async function getCurrentVersion(): Promise<string> {
+// includes it), one directory up from this compiled file. Synchronous so it
+// can also back `program.version()`, which needs a plain string up front —
+// reading one small local file at startup isn't worth an async detour.
+export function getCurrentVersion(): string {
   const pkgPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "package.json");
-  const pkg = JSON.parse(await fs.readFile(pkgPath, "utf-8")) as { version: string };
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as { version: string };
   return pkg.version;
 }

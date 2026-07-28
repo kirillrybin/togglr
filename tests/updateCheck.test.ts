@@ -2,8 +2,14 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isNewer, checkForUpdate } from "../src/updateCheck.js";
+import { isNewer, checkForUpdate, getCurrentVersion } from "../src/updateCheck.js";
 import { readJson } from "../src/cache/store.js";
+
+describe("getCurrentVersion", () => {
+  it("reads a semver string synchronously from package.json", () => {
+    expect(getCurrentVersion()).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+});
 
 describe("isNewer", () => {
   it("detects a newer patch/minor/major version", () => {

@@ -17,7 +17,7 @@ import { getCompletionScript } from "./completion.js";
 import { installCompletion } from "./completionInstall.js";
 
 const program = new Command();
-program.name("toggl");
+program.name("toggl").version(getCurrentVersion(), "-v, --version", "print the installed version");
 
 function degradedNotice(reason: DegradedReason): string {
   return reason === "offline"
@@ -197,7 +197,7 @@ async function main() {
   // Skipped outside a real terminal (CI, scripts, piped output) so this
   // never pollutes non-interactive usage.
   if (!isTui && process.stderr.isTTY) {
-    await checkForUpdate(getCacheDir(), await getCurrentVersion());
+    await checkForUpdate(getCacheDir(), getCurrentVersion());
   }
 }
 

@@ -63,6 +63,7 @@ toggl list-projects
 toggl report [today|week]
 toggl config [--token] [--workspace <id>] [--cache-ttl-projects <seconds>] [--cache-ttl-entries <seconds>]
 toggl completion <bash|zsh> [--install]
+toggl --version
 toggl
 ```
 
@@ -80,6 +81,7 @@ toggl
 | `report [today\|week]` | Print a per-project time breakdown |
 | `config` | Show current settings (token masked); with `--token`/`--workspace`/`--cache-ttl-projects`/`--cache-ttl-entries`, changes them instead |
 | `completion <bash\|zsh> [--install]` | Print a shell completion script, or `--install` it into your rc file — see [Shell completion](#shell-completion) |
+| `--version` / `-v` | Print the installed version |
 | *(no arguments)* | Launch the TUI dashboard |
 
 ### TUI dashboard
