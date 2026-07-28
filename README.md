@@ -86,22 +86,24 @@ toggl
 
 Running `toggl` with no arguments opens a live dashboard: the current
 timer, a today/week summary, and recent entries (shown as
-`description [project] — duration (start–end)`, project omitted when
-there isn't one, and the `(start–end)` range omitted for the still-running
-entry, which has no end yet). Up to 20 recent entries are kept, displayed
-through a scrolling 5-row window that follows the highlight (`↑ N more` /
-`↓ N more` indicate what's scrolled off-screen). The dashboard runs in the
-terminal's alternate screen buffer (like `vim`/`htop`), so it fully
-disappears on exit instead of leaving its last frame in your shell.
+`description [project] #tag1 #tag2 — duration (start–end)`, project/tags
+omitted when there aren't any, and the `(start–end)` range omitted for the
+still-running entry, which has no end yet). Up to 20 recent entries are
+kept, displayed through a scrolling 5-row window that follows the highlight
+(`↑ N more` / `↓ N more` indicate what's scrolled off-screen). The
+dashboard runs in the terminal's alternate screen buffer (like
+`vim`/`htop`), so it fully disappears on exit instead of leaving its last
+frame in your shell.
 
 | Key | Action |
 |---|---|
 | `s` | Stop the running timer |
 | `c` | Continue the highlighted entry |
-| `n` | Start a new timer: prompts for a description, then a project (same autocomplete as `e`'s project step below) |
-| `e` | Edit the highlighted entry (description → start → end → project, one prompt per field; the running entry has no end yet, so that step is skipped). The project step autocompletes: type to filter, `↑`/`↓` to highlight a match, `Enter` to pick it or to submit the typed text as-is, blank to leave it unchanged |
+| `n` | Start a new timer: prompts for a description, then a project (same autocomplete as `e`'s project step below), then tags (comma-separated) |
+| `e` | Edit the highlighted entry (description → start → end → project → tags, one prompt per field; the running entry has no end yet, so that step is skipped). The project step autocompletes: type to filter, `↑`/`↓` to highlight a match, `Enter` to pick it or to submit the typed text as-is; tags are comma-separated and replace the existing set. Blank leaves either unchanged |
 | `d` | Delete the highlighted entry (asks for `y`/`n` confirmation first) |
 | `j` / `k` or `↓` / `↑` | Move the highlight up/down the recent-entries list |
+| `/` | Filter the recent-entries list by description, project, or tag — matches live as you type. `Enter` keeps the filter applied after closing the prompt (submit blank to clear it); `Esc` cancels the edit without changing whatever filter was already active. Filtering never spends API budget — it only searches what's already cached |
 | `r` | Force refresh (bypasses the cache TTL and rate-limit budget for one call) |
 | `q` | Quit |
 | `Esc` `Esc` | Quit (press twice quickly — works from anywhere, including mid-wizard) |

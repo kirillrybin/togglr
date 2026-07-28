@@ -14,7 +14,7 @@ import { resolveRange } from "../commands/report.js";
 import { aggregateReport } from "../domain/report.js";
 import type { Config } from "../config/config.js";
 import type { Project, Timer } from "../domain/models.js";
-import { Dashboard, filterProjectSuggestions, type RecentEntryView } from "./Dashboard.js";
+import { Dashboard, filterProjectSuggestions, filterEntries, type RecentEntryView } from "./Dashboard.js";
 
 const REFRESH_INTERVAL_MS = 30_000;
 const TICK_INTERVAL_MS = 1000;
@@ -75,6 +75,7 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
       projectName: e.projectId !== null ? (projectNameById.get(e.projectId) ?? null) : null,
       start: e.start,
       stop: e.stop,
+      tags: e.tags,
     }));
   return {
     timer,
@@ -104,15 +105,20 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   const [selectedIndex, setSelectedIndex] = useState(0);
   type Mode =
     | "dashboard"
+    | "search"
     | "new-timer"
     | "new-timer-project"
+    | "new-timer-tags"
     | "confirm-delete"
     | "edit-description"
     | "edit-start"
     | "edit-end"
-    | "edit-project";
+    | "edit-project"
+    | "edit-tags";
   const [mode, setMode] = useState<Mode>("dashboard");
   const [inputValue, setInputValue] = useState("");
+  // The committed filter — stays applied after the search prompt closes.
+  const [searchQuery, setSearchQuery] = useState("");
   const [pendingDelete, setPendingDelete] = useState<{ entryId: number; description: string } | null>(null);
   const [pendingEdit, setPendingEdit] = useState<{
     entryId: number;
@@ -120,9 +126,10 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
     start: string;
     end: string;
     projectName: string;
+    tags: string;
     isRunning: boolean;
   } | null>(null);
-  const [pendingNewTimer, setPendingNewTimer] = useState<{ description: string } | null>(null);
+  const [pendingNewTimer, setPendingNewTimer] = useState<{ description: string; projectId?: number } | null>(null);
   // Which of the filtered project suggestions is highlighted, so Enter can
   // pick it instead of submitting the raw (possibly partial) typed text.
   // null means "no highlight" — Enter then falls back to the raw text.
@@ -165,6 +172,14 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   const elapsedSeconds = state?.timer
     ? Math.floor((ctx.now().getTime() - new Date(state.timer.startedAt).getTime()) / 1000)
     : 0;
+
+  const view = state ?? EMPTY_STATE;
+  // While actively typing a search, filter live off the in-progress text;
+  // once submitted (or when not searching at all), use the committed query.
+  const activeSearchQuery = mode === "search" ? inputValue : searchQuery;
+  const filteredEntries = filterEntries(view.recentEntries, activeSearchQuery);
+  const clampedSelectedIndex =
+    filteredEntries.length === 0 ? 0 : Math.min(selectedIndex, filteredEntries.length - 1);
 
   // Active on any step that's asking for a project name (new timer or edit):
   // filters `state.projects` by the currently typed text.
@@ -214,8 +229,8 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
           console.error(err instanceof Error ? err.message : String(err));
         }
         await refresh();
-      } else if (input === "c" && state?.recentEntries[selectedIndex]) {
-        const entry = state.recentEntries[selectedIndex];
+      } else if (input === "c" && filteredEntries[clampedSelectedIndex]) {
+        const entry = filteredEntries[clampedSelectedIndex];
         try {
           await createTimer(ctx, config, entry.description, entry.projectId);
         } catch (err) {
@@ -229,14 +244,17 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       } else if (input === "n") {
         setInputValue("");
         setMode("new-timer");
-      } else if (input === "d" && state?.recentEntries[selectedIndex]) {
-        const entry = state.recentEntries[selectedIndex];
+      } else if (input === "/") {
+        setInputValue(searchQuery);
+        setMode("search");
+      } else if (input === "d" && filteredEntries[clampedSelectedIndex]) {
+        const entry = filteredEntries[clampedSelectedIndex];
         setPendingDelete({ entryId: entry.entryId, description: entry.description });
         setMode("confirm-delete");
-      } else if (input === "e" && state?.recentEntries[selectedIndex]) {
-        const entry = state.recentEntries[selectedIndex];
+      } else if (input === "e" && filteredEntries[clampedSelectedIndex]) {
+        const entry = filteredEntries[clampedSelectedIndex];
         const projectName = entry.projectId !== null
-          ? (state.projects.find((p) => p.id === entry.projectId)?.name ?? "")
+          ? (state?.projects.find((p) => p.id === entry.projectId)?.name ?? "")
           : "";
         const next = {
           entryId: entry.entryId,
@@ -246,13 +264,14 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
           // for it (see handleEditStartSubmit) rather than asking for one.
           end: entry.stop !== null ? formatTimeHHMM(entry.stop) : "",
           projectName,
+          tags: entry.tags.join(", "),
           isRunning: entry.stop === null,
         };
         setPendingEdit(next);
         setInputValue(next.description);
         setMode("edit-description");
-      } else if (state && state.recentEntries.length > 0) {
-        if (input === "j" || key.downArrow) setSelectedIndex((i) => Math.min(i + 1, state.recentEntries.length - 1));
+      } else if (filteredEntries.length > 0) {
+        if (input === "j" || key.downArrow) setSelectedIndex((i) => Math.min(i + 1, filteredEntries.length - 1));
         if (input === "k" || key.upArrow) setSelectedIndex((i) => Math.max(i - 1, 0));
       }
     },
@@ -277,6 +296,23 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
     { isActive: true }
   );
 
+  // A single Escape while editing the search text closes the prompt without
+  // touching the previously committed filter (if any) — unlike the wizards,
+  // this one gets its own single-Escape-cancels gesture, matching how `/`
+  // search works in less/vim rather than the double-Escape-to-quit pattern.
+  useInput(
+    (_input, key) => {
+      if (key.escape) setMode("dashboard");
+    },
+    { isActive: mode === "search" }
+  );
+
+  const handleSearchSubmit = useCallback((value: string) => {
+    setSearchQuery(value.trim());
+    setSelectedIndex(0);
+    setMode("dashboard");
+  }, []);
+
   const handleNewTimerDescriptionSubmit = useCallback((value: string) => {
     const description = value.trim();
     if (!description) {
@@ -290,31 +326,48 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   }, []);
 
   const handleNewTimerProjectSubmit = useCallback(
-    async (value: string) => {
+    (value: string) => {
       if (!pendingNewTimer) return;
-      const { description } = pendingNewTimer;
       // A highlighted suggestion wins outright; otherwise fall back to
       // whatever was typed (blank included, meaning "no project").
       const projectName =
         suggestionIndex !== null
           ? projectSuggestions[suggestionIndex]?.name
           : value.trim() || undefined;
+      let projectId: number | undefined;
+      if (projectName) {
+        const match = state?.projects.find((p) => p.name.toLowerCase() === projectName.toLowerCase());
+        if (!match) {
+          console.error(`Unknown project: ${projectName}`);
+          setPendingNewTimer(null);
+          setMode("dashboard");
+          return;
+        }
+        projectId = match.id;
+      }
+      setPendingNewTimer({ ...pendingNewTimer, projectId });
+      setInputValue("");
+      setSuggestionIndex(null);
+      setMode("new-timer-tags");
+    },
+    [pendingNewTimer, projectSuggestions, suggestionIndex, state]
+  );
+
+  const handleNewTimerTagsSubmit = useCallback(
+    async (value: string) => {
+      if (!pendingNewTimer) return;
+      const { description, projectId } = pendingNewTimer;
+      const tags = value.trim() ? value.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
       setPendingNewTimer(null);
       setMode("dashboard");
       try {
-        let projectId: number | undefined;
-        if (projectName) {
-          const match = state?.projects.find((p) => p.name.toLowerCase() === projectName.toLowerCase());
-          if (!match) throw new Error(`Unknown project: ${projectName}`);
-          projectId = match.id;
-        }
-        await createTimer(ctx, config, description, projectId);
+        await createTimer(ctx, config, description, projectId, tags);
       } catch (err) {
         console.error(err instanceof Error ? err.message : String(err));
       }
       await refresh();
     },
-    [ctx, config, pendingNewTimer, projectSuggestions, suggestionIndex, state, refresh]
+    [ctx, config, pendingNewTimer, refresh]
   );
 
   // The edit flow is a 4-step wizard (description -> start -> end -> project),
@@ -363,12 +416,25 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   );
 
   const handleEditProjectSubmit = useCallback(
-    async (value: string) => {
+    (value: string) => {
       if (!pendingEdit) return;
-      const { entryId, description, start, end, isRunning } = pendingEdit;
       // A highlighted suggestion wins outright; otherwise fall back to
       // whatever was typed (which starts pre-filled with the current project).
       const projectName = suggestionIndex !== null ? projectSuggestions[suggestionIndex]?.name : value.trim();
+      const next = { ...pendingEdit, projectName: projectName ?? "" };
+      setPendingEdit(next);
+      setInputValue(next.tags);
+      setSuggestionIndex(null);
+      setMode("edit-tags");
+    },
+    [pendingEdit, projectSuggestions, suggestionIndex]
+  );
+
+  const handleEditTagsSubmit = useCallback(
+    async (value: string) => {
+      if (!pendingEdit) return;
+      const { entryId, description, start, end, projectName, isRunning } = pendingEdit;
+      const tags = value.trim() ? value.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
       setPendingEdit(null);
       setMode("dashboard");
       try {
@@ -379,26 +445,28 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
           // rather than sending the placeholder empty string.
           end: isRunning ? undefined : end,
           projectName: projectName || undefined,
+          tags,
         });
       } catch (err) {
         console.error(err instanceof Error ? err.message : String(err));
       }
       await refresh();
     },
-    [ctx, config, pendingEdit, projectSuggestions, suggestionIndex, refresh]
+    [ctx, config, pendingEdit, refresh]
   );
 
   const INPUT_STEPS: Partial<Record<Mode, { label: string; onSubmit: (value: string) => void | Promise<void> }>> = {
+    search: { label: "Filter", onSubmit: handleSearchSubmit },
     "new-timer": { label: "New timer", onSubmit: handleNewTimerDescriptionSubmit },
     "new-timer-project": { label: "Project (blank = none)", onSubmit: handleNewTimerProjectSubmit },
+    "new-timer-tags": { label: "Tags (comma-separated, blank = none)", onSubmit: handleNewTimerTagsSubmit },
     "edit-description": { label: "Edit description", onSubmit: handleEditDescriptionSubmit },
     "edit-start": { label: "Edit start (HH:MM)", onSubmit: handleEditStartSubmit },
     "edit-end": { label: "Edit end (HH:MM)", onSubmit: handleEditEndSubmit },
     "edit-project": { label: "Edit project (blank = unchanged)", onSubmit: handleEditProjectSubmit },
+    "edit-tags": { label: "Edit tags (comma-separated, blank = unchanged)", onSubmit: handleEditTagsSubmit },
   };
   const activeInputStep = INPUT_STEPS[mode];
-
-  const view = state ?? EMPTY_STATE;
 
   return (
     <Dashboard
@@ -406,9 +474,9 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       elapsedSeconds={elapsedSeconds}
       todayTotalSeconds={view.todayTotalSeconds}
       weekTotalSeconds={view.weekTotalSeconds}
-      recentEntries={view.recentEntries}
+      recentEntries={filteredEntries}
       stale={view.stale}
-      selectedIndex={selectedIndex}
+      selectedIndex={clampedSelectedIndex}
       inputMode={activeInputStep !== undefined}
       inputLabel={activeInputStep?.label ?? ""}
       inputValue={inputValue}
@@ -417,6 +485,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       confirmDeleteDescription={mode === "confirm-delete" ? (pendingDelete?.description ?? null) : null}
       projectSuggestions={projectSuggestions}
       selectedSuggestionIndex={suggestionIndex}
+      searchQuery={searchQuery}
     />
   );
 }

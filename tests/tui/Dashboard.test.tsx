@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { render } from "ink-testing-library";
 import React from "react";
-import { Dashboard, computeVisibleWindow, filterProjectSuggestions, type RecentEntryView } from "../../src/tui/Dashboard.js";
+import {
+  Dashboard,
+  computeVisibleWindow,
+  filterProjectSuggestions,
+  filterEntries,
+  type RecentEntryView,
+} from "../../src/tui/Dashboard.js";
 import { formatTimeHHMM } from "../../src/commands/add.js";
 import type { Project } from "../../src/domain/models.js";
 
@@ -16,6 +22,7 @@ function makeEntries(count: number): RecentEntryView[] {
     projectName: null,
     start: "2026-07-26T11:00:00Z",
     stop: "2026-07-26T11:01:00Z",
+    tags: [],
   }));
 }
 
@@ -59,6 +66,7 @@ describe("Dashboard", () => {
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        searchQuery=""
       />
     );
     expect(lastFrame()).toContain("No timer running");
@@ -71,7 +79,7 @@ describe("Dashboard", () => {
         elapsedSeconds={2537}
         todayTotalSeconds={11520}
         weekTotalSeconds={50700}
-        recentEntries={[{ entryId: 2, description: "Standup", totalSeconds: 900, projectId: 5, projectName: "Website", start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:15:00Z" }]}
+        recentEntries={[{ entryId: 2, description: "Standup", totalSeconds: 900, projectId: 5, projectName: "Website", start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:15:00Z", tags: [] }]}
         stale={false}
         selectedIndex={0}
         inputMode={false}
@@ -82,6 +90,7 @@ describe("Dashboard", () => {
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        searchQuery=""
       />
     );
     const frame = lastFrame() ?? "";
@@ -96,12 +105,13 @@ describe("Dashboard", () => {
     const { lastFrame } = render(
       <Dashboard
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
-        recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z" }]}
+        recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: [] }]}
         stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        searchQuery=""
       />
     );
     const frame = lastFrame() ?? "";
@@ -109,6 +119,23 @@ describe("Dashboard", () => {
     // duration when there's no project (the footer hint has its own
     // brackets, so check the entry's own line specifically).
     expect(frame).toContain("Misc — 00:01:00");
+  });
+
+  it("shows tags on an entry's row, hashtag-prefixed", () => {
+    const { lastFrame } = render(
+      <Dashboard
+        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["urgent", "billable"] }]}
+        stale={false} selectedIndex={0}
+        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
+        searchQuery=""
+      />
+    );
+    const frame = lastFrame() ?? "";
+    expect(frame).toContain("#urgent #billable");
   });
 
   it("shows a stale indicator when the cache could not be refreshed", () => {
@@ -120,6 +147,7 @@ describe("Dashboard", () => {
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        searchQuery=""
       />
     );
     expect(lastFrame()).toContain("stale");
@@ -134,6 +162,7 @@ describe("Dashboard", () => {
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        searchQuery=""
       />
     );
     const frame = lastFrame() ?? "";
@@ -150,6 +179,7 @@ describe("Dashboard", () => {
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        searchQuery=""
       />
     );
     const frame = lastFrame() ?? "";
@@ -166,6 +196,7 @@ describe("Dashboard", () => {
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        searchQuery=""
       />
     );
     const frame = lastFrame() ?? "";
@@ -187,6 +218,7 @@ describe("Dashboard", () => {
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        searchQuery=""
       />
     );
     const frame = lastFrame() ?? "";
@@ -202,6 +234,7 @@ describe("Dashboard", () => {
         confirmDeleteDescription="Standup"
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        searchQuery=""
       />
     );
     const frame = lastFrame() ?? "";
@@ -224,12 +257,45 @@ describe("Dashboard", () => {
         confirmDeleteDescription={null}
         projectSuggestions={filterProjectSuggestions(projects, "web")}
         selectedSuggestionIndex={1}
+        searchQuery=""
       />
     );
     const frame = lastFrame() ?? "";
     expect(frame).toContain("Website");
     expect(frame).toContain("Website Redesign");
     expect(frame).not.toContain("Mobile app");
+  });
+
+  it("shows a filter indicator with the match count when a search query is active", () => {
+    const { lastFrame } = render(
+      <Dashboard
+        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={makeEntries(2)} stale={false} selectedIndex={0}
+        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
+        searchQuery="entry"
+      />
+    );
+    const frame = lastFrame() ?? "";
+    expect(frame).toContain('Filter: "entry" (2 matches)');
+  });
+
+  it("shows no filter indicator when there's no active search query", () => {
+    const { lastFrame } = render(
+      <Dashboard
+        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={makeEntries(2)} stale={false} selectedIndex={0}
+        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
+        searchQuery=""
+      />
+    );
+    const frame = lastFrame() ?? "";
+    expect(frame).not.toContain("Filter:");
   });
 });
 
@@ -252,5 +318,34 @@ describe("filterProjectSuggestions", () => {
 
   it("returns nothing when nothing matches", () => {
     expect(filterProjectSuggestions(projects, "nope")).toEqual([]);
+  });
+});
+
+describe("filterEntries", () => {
+  const entries: RecentEntryView[] = [
+    { entryId: 1, description: "Fix login bug", totalSeconds: 60, projectId: 5, projectName: "Website", start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["urgent"] },
+    { entryId: 2, description: "Standup", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["meeting"] },
+    { entryId: 3, description: "Write docs", totalSeconds: 60, projectId: 7, projectName: "Docs", start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: [] },
+  ];
+
+  it("returns everything for a blank query", () => {
+    expect(filterEntries(entries, "")).toEqual(entries);
+    expect(filterEntries(entries, "   ")).toEqual(entries);
+  });
+
+  it("matches case-insensitively on the description", () => {
+    expect(filterEntries(entries, "login")).toEqual([entries[0]]);
+  });
+
+  it("matches on the project name", () => {
+    expect(filterEntries(entries, "docs")).toEqual([entries[2]]);
+  });
+
+  it("matches on a tag", () => {
+    expect(filterEntries(entries, "urgent")).toEqual([entries[0]]);
+  });
+
+  it("returns nothing when nothing matches", () => {
+    expect(filterEntries(entries, "nope")).toEqual([]);
   });
 });

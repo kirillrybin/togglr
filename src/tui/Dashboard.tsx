@@ -21,6 +21,21 @@ export interface RecentEntryView {
   projectName: string | null;
   start: string;
   stop: string | null;
+  tags: string[];
+}
+
+// Client-side only — the whole point is filtering the already-cached recent
+// entries without spending any API budget, so it matches everything already
+// visible in a row (description, project, tags), not just the description.
+export function filterEntries(entries: RecentEntryView[], query: string): RecentEntryView[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return entries;
+  return entries.filter(
+    (e) =>
+      e.description.toLowerCase().includes(q) ||
+      (e.projectName?.toLowerCase().includes(q) ?? false) ||
+      e.tags.some((t) => t.toLowerCase().includes(q))
+  );
 }
 
 const VISIBLE_ENTRY_COUNT = 5;
@@ -52,6 +67,7 @@ export interface DashboardProps {
   confirmDeleteDescription: string | null;
   projectSuggestions: Project[];
   selectedSuggestionIndex: number | null;
+  searchQuery: string;
 }
 
 export function Dashboard(props: DashboardProps): React.ReactElement {
@@ -70,6 +86,12 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
       </Box>
       <Box marginTop={1} flexDirection="column">
         <Text underline>Recent entries</Text>
+        {props.searchQuery && (
+          <Text dimColor>
+            Filter: "{props.searchQuery}" ({props.recentEntries.length} match
+            {props.recentEntries.length === 1 ? "" : "es"})
+          </Text>
+        )}
         {props.recentEntries.length === 0 && <Text dimColor>No recent entries</Text>}
         {(() => {
           const { start, end } = computeVisibleWindow(
@@ -83,7 +105,9 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
               {props.recentEntries.slice(start, end).map((entry, i) => (
                 <Text key={start + i} inverse={start + i === props.selectedIndex}>
                   {entry.description}
-                  {entry.projectName ? ` [${entry.projectName}]` : ""} — {formatDuration(entry.totalSeconds)}
+                  {entry.projectName ? ` [${entry.projectName}]` : ""}
+                  {entry.tags.length > 0 ? ` ${entry.tags.map((t) => `#${t}`).join(" ")}` : ""}
+                  {" — "}{formatDuration(entry.totalSeconds)}
                   {entry.stop !== null ? ` (${formatTimeHHMM(entry.start)}–${formatTimeHHMM(entry.stop)})` : ""}
                 </Text>
               ))}
@@ -117,7 +141,7 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
         </Box>
       ) : (
         <Box marginTop={1}>
-          <Text dimColor>[j/k/↑/↓] move  [s] stop  [c] continue  [n] new  [e] edit  [d] delete  [r] refresh  [q] quit</Text>
+          <Text dimColor>[j/k/↑/↓] move  [s] stop  [c] continue  [n] new  [e] edit  [d] delete  [/] search  [r] refresh  [q] quit</Text>
         </Box>
       )}
     </Box>
