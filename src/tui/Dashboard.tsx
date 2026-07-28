@@ -101,6 +101,7 @@ export interface DashboardProps {
   onInputChange: (value: string) => void;
   onInputSubmit: (value: string) => void;
   confirmDeleteDescription: string | null;
+  lastDeletedDescription: string | null;
   projectSuggestions: Project[];
   tagSuggestions: string[];
   selectedSuggestionIndex: number | null;
@@ -158,6 +159,11 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
       {props.stale && (
         <Box marginTop={1}>
           <Text color="yellow">offline / stale data</Text>
+        </Box>
+      )}
+      {props.lastDeletedDescription !== null && !props.inputMode && props.confirmDeleteDescription === null && (
+        <Box marginTop={1}>
+          <Text dimColor>Deleted "{props.lastDeletedDescription}" — press 'u' to undo</Text>
         </Box>
       )}
       {props.inputMode ? (

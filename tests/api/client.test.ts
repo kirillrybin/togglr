@@ -64,6 +64,18 @@ describe("TogglClient", () => {
     expect(result).toEqual(mockResponse);
   });
 
+  it("uses a given start for createTimeEntry instead of defaulting to now (restoring a deleted running entry)", async () => {
+    (fetch as any).mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    const client = new TogglClient("token");
+
+    await client.createTimeEntry(999, { description: "Restored", start: "2026-07-26T08:00:00.000Z" });
+
+    const [, init] = (fetch as any).mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.start).toBe("2026-07-26T08:00:00.000Z");
+    expect(body.duration).toBe(-1);
+  });
+
   it("sends POST request with explicit start/stop/duration for createCompletedTimeEntry", async () => {
     const mockResponse = { id: 124, description: "Manual entry", duration: 9000 };
     (fetch as any).mockResolvedValue({ ok: true, status: 200, json: async () => mockResponse });

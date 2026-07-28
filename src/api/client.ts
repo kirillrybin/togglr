@@ -11,6 +11,10 @@ export interface CreateTimeEntryData {
   description: string;
   project_id?: number;
   tags?: string[];
+  // Defaults to now (the normal start/continue case). Confirmed against the
+  // real API: a backdated start with duration -1 is accepted just fine, so
+  // this also covers restoring a deleted running entry to its original start.
+  start?: string;
 }
 
 export interface CreateCompletedTimeEntryData {
@@ -72,7 +76,7 @@ export class TogglClient implements TogglApiClient {
     return this.request("POST", `/workspaces/${workspaceId}/time_entries`, {
       ...data,
       workspace_id: workspaceId,
-      start: new Date().toISOString(),
+      start: data.start ?? new Date().toISOString(),
       duration: -1,
       created_with: "togglr",
     });

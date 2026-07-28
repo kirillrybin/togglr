@@ -104,6 +104,7 @@ frame in your shell.
 | `n` | Start a new timer: prompts for a description, then a project, then tags (same autocomplete as `e`'s steps below) |
 | `e` | Edit the highlighted entry (description → start → end → project → tags, one prompt per field; the running entry has no end yet, so that step is skipped). Project: type to filter, `↑`/`↓` to highlight a match, `Enter` to pick it or submit the typed text as-is. Tags: comma-separated, replaces the existing set; `↑`/`↓` highlights a match for the segment you're currently typing (after the last comma) and `Tab` inserts it, leaving `Enter` free to submit the whole line whenever you're done. Blank leaves either field unchanged |
 | `d` | Delete the highlighted entry (asks for `y`/`n` confirmation first) |
+| `u` | Undo the most recent delete — recreates the entry (new id) with its original description/project/tags/time. Only one delete deep, and only until the next delete replaces it |
 | `j` / `k` or `↓` / `↑` | Move the highlight up/down the recent-entries list |
 | `/` | Filter the recent-entries list by description, project, or tag — matches live as you type. `Enter` keeps the filter applied after closing the prompt (submit blank to clear it); `Esc` cancels the edit without changing whatever filter was already active. Filtering never spends API budget — it only searches what's already cached |
 | `r` | Force refresh (bypasses the cache TTL and rate-limit budget for one call) |

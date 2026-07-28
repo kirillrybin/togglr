@@ -65,7 +65,7 @@ describe("Dashboard", () => {
         inputValue="" inputResetKey={0}
         onInputChange={noop}
         onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -90,7 +90,7 @@ describe("Dashboard", () => {
         inputValue="" inputResetKey={0}
         onInputChange={noop}
         onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -112,7 +112,7 @@ describe("Dashboard", () => {
         recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: [] }]}
         stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -133,7 +133,7 @@ describe("Dashboard", () => {
         recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["urgent", "billable"] }]}
         stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -150,7 +150,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={true} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -166,7 +166,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="New timer" inputValue="Coding" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -184,7 +184,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="Edit start (HH:MM)" inputValue="09:00" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -202,7 +202,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(20)} stale={false} selectedIndex={10}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -225,7 +225,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(3)} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -242,7 +242,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription="Standup"
+        confirmDeleteDescription="Standup" lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -253,6 +253,41 @@ describe("Dashboard", () => {
     expect(frame).toContain('Delete "Standup"?');
     expect(frame).toContain("y/n");
     expect(frame).not.toContain("[q] quit");
+  });
+
+  it("shows an undo hint after a delete, naming the deleted entry", () => {
+    const { lastFrame } = render(
+      <Dashboard
+        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={[]} stale={false} selectedIndex={0}
+        inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription={null} lastDeletedDescription="Standup"
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
+        tagSuggestions={[]}
+        searchQuery=""
+      />
+    );
+    const frame = lastFrame() ?? "";
+    expect(frame).toContain('Deleted "Standup"');
+    expect(frame).toContain("'u' to undo");
+  });
+
+  it("hides the undo hint while a wizard prompt or delete confirmation is showing", () => {
+    const { lastFrame } = render(
+      <Dashboard
+        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={[]} stale={false} selectedIndex={0}
+        inputMode={true} inputLabel="New timer" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription={null} lastDeletedDescription="Standup"
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
+        tagSuggestions={[]}
+        searchQuery=""
+      />
+    );
+    const frame = lastFrame() ?? "";
+    expect(frame).not.toContain("Deleted");
   });
 
   it("shows filtered project suggestions in the input box, with the highlighted one inverted", () => {
@@ -266,7 +301,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="Project (blank = none)" inputValue="web" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={filterProjectSuggestions(projects, "web")}
         selectedSuggestionIndex={1}
         tagSuggestions={[]}
@@ -285,7 +320,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="Tags" inputValue="bi" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         tagSuggestions={["billable"]}
         selectedSuggestionIndex={0}
@@ -303,7 +338,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(2)} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}
@@ -320,7 +355,7 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(2)} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
-        confirmDeleteDescription={null}
+        confirmDeleteDescription={null} lastDeletedDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
         tagSuggestions={[]}

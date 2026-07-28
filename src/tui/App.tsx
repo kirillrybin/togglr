@@ -7,6 +7,7 @@ import { reconcileTimer } from "../domain/reconcileTimer.js";
 import { runStop } from "../commands/stop.js";
 import { createTimer } from "../commands/start.js";
 import { runDeleteEntry } from "../commands/deleteEntry.js";
+import { runUndoDelete, type DeletedEntrySnapshot } from "../commands/undoDelete.js";
 import { runEditEntry } from "../commands/editEntry.js";
 import { formatTimeHHMM } from "../commands/add.js";
 import { normalizeKey } from "./keymap.js";
@@ -132,7 +133,17 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   const [inputValue, setInputValue] = useState("");
   // The committed filter — stays applied after the search prompt closes.
   const [searchQuery, setSearchQuery] = useState("");
-  const [pendingDelete, setPendingDelete] = useState<{ entryId: number; description: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    entryId: number;
+    description: string;
+    projectId: number | null;
+    start: string;
+    stop: string | null;
+    tags: string[];
+  } | null>(null);
+  // Only the most recent delete is undoable — a second delete (or a
+  // successful undo) simply replaces/clears this.
+  const [lastDeleted, setLastDeleted] = useState<DeletedEntrySnapshot | null>(null);
   const [pendingEdit, setPendingEdit] = useState<{
     entryId: number;
     description: string;
@@ -246,11 +257,12 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       const input = normalizeKey(rawInput);
       if (mode === "confirm-delete" && pendingDelete) {
         if (input === "y") {
-          const { entryId } = pendingDelete;
+          const { entryId, ...snapshot } = pendingDelete;
           setPendingDelete(null);
           setMode("dashboard");
           try {
             await runDeleteEntry(ctx, config, entryId);
+            setLastDeleted(snapshot);
           } catch (err) {
             console.error(err instanceof Error ? err.message : String(err));
           }
@@ -290,8 +302,24 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
         setMode("search");
       } else if (input === "d" && filteredEntries[clampedSelectedIndex]) {
         const entry = filteredEntries[clampedSelectedIndex];
-        setPendingDelete({ entryId: entry.entryId, description: entry.description });
+        setPendingDelete({
+          entryId: entry.entryId,
+          description: entry.description,
+          projectId: entry.projectId,
+          start: entry.start,
+          stop: entry.stop,
+          tags: entry.tags,
+        });
         setMode("confirm-delete");
+      } else if (input === "u" && lastDeleted) {
+        const snapshot = lastDeleted;
+        setLastDeleted(null);
+        try {
+          await runUndoDelete(ctx, config, snapshot);
+        } catch (err) {
+          console.error(err instanceof Error ? err.message : String(err));
+        }
+        await refresh();
       } else if (input === "e" && filteredEntries[clampedSelectedIndex]) {
         const entry = filteredEntries[clampedSelectedIndex];
         const projectName = entry.projectId !== null
@@ -525,6 +553,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       onInputChange={handleInputChange}
       onInputSubmit={activeInputStep?.onSubmit ?? (() => {})}
       confirmDeleteDescription={mode === "confirm-delete" ? (pendingDelete?.description ?? null) : null}
+      lastDeletedDescription={lastDeleted?.description ?? null}
       projectSuggestions={projectSuggestions}
       tagSuggestions={tagSuggestions}
       selectedSuggestionIndex={suggestionIndex}
