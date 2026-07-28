@@ -8,7 +8,7 @@ import { runStop } from "./commands/stop.js";
 import { runStatus, formatDuration } from "./commands/status.js";
 import { runListProjects } from "./commands/listProjects.js";
 import { runContinue } from "./commands/continueLast.js";
-import { runReport, type ReportRange } from "./commands/report.js";
+import { runReport, formatReportCsv, parseReportDate, type ReportRange } from "./commands/report.js";
 import { runConfigShow, runConfigUpdate, formatConfig } from "./commands/config.js";
 import type { DegradedReason } from "./cache/sync.js";
 import { getCacheDir, getConfigDir } from "./cache/paths.js";
@@ -111,15 +111,41 @@ program.command("continue").action(async () => {
 
 program
   .command("report [range]")
-  .action(async (range: string = "today") => {
-    if (range !== "today" && range !== "week") {
-      console.error(`Unknown report range: "${range}". Use "today" or "week".`);
-      process.exit(1);
-    }
+  .option("--from <date>", "start date (YYYY-MM-DD) — overrides [range]")
+  .option("--to <date>", "end date (YYYY-MM-DD), inclusive; defaults to today when only --from is given")
+  .option("--csv", "output as CSV instead of plain text")
+  .action(async (range: string = "today", opts: { from?: string; to?: string; csv?: boolean }) => {
     const { ctx } = await buildContext();
-    const { data: summaries, degraded } = await runReport(ctx, range as ReportRange);
+
+    let target: ReportRange | { from: Date; to: Date };
+    if (opts.from || opts.to) {
+      if (!opts.from) {
+        console.error("--to requires --from as well.");
+        process.exit(1);
+      }
+      const from = parseReportDate("--from", opts.from);
+      const to = opts.to ? parseReportDate("--to", opts.to) : ctx.now();
+      if (opts.to) to.setHours(23, 59, 59, 999); // inclusive end of day
+      if (to < from) {
+        console.error(`--to (${opts.to ?? "today"}) must not be before --from (${opts.from}).`);
+        process.exit(1);
+      }
+      target = { from, to };
+    } else {
+      if (range !== "today" && range !== "week") {
+        console.error(`Unknown report range: "${range}". Use "today"/"week", or pass --from/--to.`);
+        process.exit(1);
+      }
+      target = range as ReportRange;
+    }
+
+    const { data: summaries, degraded } = await runReport(ctx, target);
     if (degraded) console.error(degradedNotice(degraded));
-    summaries.forEach((s) => console.log(`${s.projectName}: ${formatDuration(Math.round(s.totalSeconds))}`));
+    if (opts.csv) {
+      console.log(formatReportCsv(summaries));
+    } else {
+      summaries.forEach((s) => console.log(`${s.projectName}: ${formatDuration(Math.round(s.totalSeconds))}`));
+    }
   });
 
 function parsePositiveInt(label: string, value: string | undefined): number | undefined {

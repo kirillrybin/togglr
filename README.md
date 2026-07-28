@@ -60,7 +60,7 @@ toggl stop
 toggl status
 toggl continue
 toggl list-projects
-toggl report [today|week]
+toggl report [today|week] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--csv]
 toggl config [--token] [--workspace <id>] [--cache-ttl-projects <seconds>] [--cache-ttl-entries <seconds>]
 toggl completion <bash|zsh> [--install]
 toggl --version
@@ -78,7 +78,7 @@ toggl
 | `status` | Show the current timer and elapsed time (no network call) |
 | `continue` | Repeat the most recent time entry |
 | `list-projects` | List cached projects |
-| `report [today\|week]` | Print a per-project time breakdown |
+| `report [today\|week] [--from] [--to] [--csv]` | Print a per-project time breakdown. `--from`/`--to` (`YYYY-MM-DD`, `--to` inclusive, defaults to today) override the preset range; `--csv` prints `project,duration,seconds` instead of plain text |
 | `config` | Show current settings (token masked); with `--token`/`--workspace`/`--cache-ttl-projects`/`--cache-ttl-entries`, changes them instead |
 | `completion <bash\|zsh> [--install]` | Print a shell completion script, or `--install` it into your rc file — see [Shell completion](#shell-completion) |
 | `--version` / `-v` | Print the installed version |
