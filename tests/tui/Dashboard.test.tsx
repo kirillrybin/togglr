@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { render } from "ink-testing-library";
 import React from "react";
-import { Dashboard, computeVisibleWindow, type RecentEntryView } from "../../src/tui/Dashboard.js";
+import { Dashboard, computeVisibleWindow, filterProjectSuggestions, type RecentEntryView } from "../../src/tui/Dashboard.js";
 import { formatTimeHHMM } from "../../src/commands/add.js";
+import type { Project } from "../../src/domain/models.js";
 
 const noop = () => {};
 
@@ -56,6 +57,8 @@ describe("Dashboard", () => {
         onInputChange={noop}
         onInputSubmit={noop}
         confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
       />
     );
     expect(lastFrame()).toContain("No timer running");
@@ -77,6 +80,8 @@ describe("Dashboard", () => {
         onInputChange={noop}
         onInputSubmit={noop}
         confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
       />
     );
     const frame = lastFrame() ?? "";
@@ -95,6 +100,8 @@ describe("Dashboard", () => {
         stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
       />
     );
     const frame = lastFrame() ?? "";
@@ -111,6 +118,8 @@ describe("Dashboard", () => {
         recentEntries={[]} stale={true} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
       />
     );
     expect(lastFrame()).toContain("stale");
@@ -123,6 +132,8 @@ describe("Dashboard", () => {
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="New timer" inputValue="Coding" onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
       />
     );
     const frame = lastFrame() ?? "";
@@ -137,6 +148,8 @@ describe("Dashboard", () => {
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="Edit start (HH:MM)" inputValue="09:00" onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
       />
     );
     const frame = lastFrame() ?? "";
@@ -151,6 +164,8 @@ describe("Dashboard", () => {
         recentEntries={makeEntries(20)} stale={false} selectedIndex={10}
         inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
       />
     );
     const frame = lastFrame() ?? "";
@@ -170,6 +185,8 @@ describe("Dashboard", () => {
         recentEntries={makeEntries(3)} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
       />
     );
     const frame = lastFrame() ?? "";
@@ -183,11 +200,57 @@ describe("Dashboard", () => {
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription="Standup"
+        projectSuggestions={[]}
+        selectedSuggestionIndex={null}
       />
     );
     const frame = lastFrame() ?? "";
     expect(frame).toContain('Delete "Standup"?');
     expect(frame).toContain("y/n");
     expect(frame).not.toContain("[q] quit");
+  });
+
+  it("shows filtered project suggestions in the input box, with the highlighted one inverted", () => {
+    const projects: Project[] = [
+      { id: 1, name: "Website", color: "#fff", workspaceId: 9 },
+      { id: 2, name: "Website Redesign", color: "#fff", workspaceId: 9 },
+      { id: 3, name: "Mobile app", color: "#fff", workspaceId: 9 },
+    ];
+    const { lastFrame } = render(
+      <Dashboard
+        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={[]} stale={false} selectedIndex={0}
+        inputMode={true} inputLabel="Project (blank = none)" inputValue="web" onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription={null}
+        projectSuggestions={filterProjectSuggestions(projects, "web")}
+        selectedSuggestionIndex={1}
+      />
+    );
+    const frame = lastFrame() ?? "";
+    expect(frame).toContain("Website");
+    expect(frame).toContain("Website Redesign");
+    expect(frame).not.toContain("Mobile app");
+  });
+});
+
+describe("filterProjectSuggestions", () => {
+  const projects: Project[] = [
+    { id: 1, name: "Website", color: "#fff", workspaceId: 9 },
+    { id: 2, name: "Website Redesign", color: "#fff", workspaceId: 9 },
+    { id: 3, name: "Mobile app", color: "#fff", workspaceId: 9 },
+  ];
+
+  it("matches case-insensitively on a substring of the name", () => {
+    expect(filterProjectSuggestions(projects, "web")).toEqual([projects[0], projects[1]]);
+    expect(filterProjectSuggestions(projects, "APP")).toEqual([projects[2]]);
+  });
+
+  it("returns nothing for a blank query", () => {
+    expect(filterProjectSuggestions(projects, "")).toEqual([]);
+    expect(filterProjectSuggestions(projects, "   ")).toEqual([]);
+  });
+
+  it("returns nothing when nothing matches", () => {
+    expect(filterProjectSuggestions(projects, "nope")).toEqual([]);
   });
 });

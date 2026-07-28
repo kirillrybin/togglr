@@ -1,9 +1,17 @@
 import React from "react";
 import { Box, Text } from "ink";
 import TextInput from "ink-text-input";
-import type { Timer } from "../domain/models.js";
+import type { Project, Timer } from "../domain/models.js";
 import { formatDuration } from "../commands/status.js";
 import { formatTimeHHMM } from "../commands/add.js";
+
+const PROJECT_SUGGESTION_LIMIT = 5;
+
+export function filterProjectSuggestions(projects: Project[], query: string): Project[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return projects.filter((p) => p.name.toLowerCase().includes(q)).slice(0, PROJECT_SUGGESTION_LIMIT);
+}
 
 export interface RecentEntryView {
   entryId: number;
@@ -42,6 +50,8 @@ export interface DashboardProps {
   onInputChange: (value: string) => void;
   onInputSubmit: (value: string) => void;
   confirmDeleteDescription: string | null;
+  projectSuggestions: Project[];
+  selectedSuggestionIndex: number | null;
 }
 
 export function Dashboard(props: DashboardProps): React.ReactElement {
@@ -90,9 +100,16 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
         </Box>
       )}
       {props.inputMode ? (
-        <Box marginTop={1}>
-          <Text>{props.inputLabel}: </Text>
-          <TextInput value={props.inputValue} onChange={props.onInputChange} onSubmit={props.onInputSubmit} />
+        <Box marginTop={1} flexDirection="column">
+          <Box>
+            <Text>{props.inputLabel}: </Text>
+            <TextInput value={props.inputValue} onChange={props.onInputChange} onSubmit={props.onInputSubmit} />
+          </Box>
+          {props.projectSuggestions.map((project, i) => (
+            <Text key={project.id} inverse={i === props.selectedSuggestionIndex} dimColor={i !== props.selectedSuggestionIndex}>
+              {"  "}{project.name}
+            </Text>
+          ))}
         </Box>
       ) : props.confirmDeleteDescription !== null ? (
         <Box marginTop={1}>

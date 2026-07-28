@@ -93,8 +93,8 @@ disappears on exit instead of leaving its last frame in your shell.
 |---|---|
 | `s` | Stop the running timer |
 | `c` | Continue the highlighted entry |
-| `n` | Start a new timer (opens an inline description prompt) |
-| `e` | Edit the highlighted entry (description → start → end → project, one prompt per field). On the running entry — which has no end yet — this just prompts for a new start time |
+| `n` | Start a new timer: prompts for a description, then a project (same autocomplete as `e`'s project step below) |
+| `e` | Edit the highlighted entry (description → start → end → project, one prompt per field; the running entry has no end yet, so that step is skipped). The project step autocompletes: type to filter, `↑`/`↓` to highlight a match, `Enter` to pick it or to submit the typed text as-is, blank to leave it unchanged |
 | `d` | Delete the highlighted entry (asks for `y`/`n` confirmation first) |
 | `j` / `k` or `↓` / `↑` | Move the highlight up/down the recent-entries list |
 | `r` | Force refresh (bypasses the cache TTL and rate-limit budget for one call) |
