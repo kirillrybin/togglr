@@ -47,7 +47,8 @@ npm link
 The first time you run any command, togglr prompts for your Toggl API
 token (found in Toggl under **Profile → API Token**) and saves it to
 `~/.config/togglr/config.json` (mode `600`). Your default workspace is
-detected automatically.
+detected automatically. Use `toggl config` afterwards to view or change
+any of this (token, workspace id, cache TTLs) without hand-editing the file.
 
 ## Usage
 
@@ -60,6 +61,8 @@ toggl status
 toggl continue
 toggl list-projects
 toggl report [today|week]
+toggl config [--token] [--workspace <id>] [--cache-ttl-projects <seconds>] [--cache-ttl-entries <seconds>]
+toggl completion <bash|zsh> [--install]
 toggl
 ```
 
@@ -75,6 +78,8 @@ toggl
 | `continue` | Repeat the most recent time entry |
 | `list-projects` | List cached projects |
 | `report [today\|week]` | Print a per-project time breakdown |
+| `config` | Show current settings (token masked); with `--token`/`--workspace`/`--cache-ttl-projects`/`--cache-ttl-entries`, changes them instead |
+| `completion <bash\|zsh> [--install]` | Print a shell completion script, or `--install` it into your rc file — see [Shell completion](#shell-completion) |
 | *(no arguments)* | Launch the TUI dashboard |
 
 ### TUI dashboard
@@ -100,6 +105,29 @@ disappears on exit instead of leaving its last frame in your shell.
 | `r` | Force refresh (bypasses the cache TTL and rate-limit budget for one call) |
 | `q` | Quit |
 | `Esc` `Esc` | Quit (press twice quickly — works from anywhere, including mid-wizard) |
+
+## Shell completion
+
+```bash
+toggl completion bash --install   # appends to ~/.bashrc
+toggl completion zsh --install    # appends to ~/.zshrc
+```
+
+Idempotent — running it again just reports it's already set up instead of
+adding a duplicate line. Restart your shell (or `source` the rc file)
+afterwards. Prefer to do it by hand, or use a different rc file? Add one of
+these yourself instead:
+
+```bash
+eval "$(toggl completion bash)"   # ~/.bashrc
+eval "$(toggl completion zsh)"    # ~/.zshrc, before compinit if you call it explicitly
+```
+
+Completes subcommand names, plus `report`'s `today`/`week` argument and
+`completion`'s own `bash`/`zsh` argument. It doesn't complete things that
+would require a network call (project/entry names) — see [Caching & rate
+limits](#caching--rate-limits) for why that's deliberately avoided outside
+the app's own cache/budget accounting.
 
 ## Update notifications
 
