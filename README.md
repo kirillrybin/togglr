@@ -101,8 +101,8 @@ frame in your shell.
 |---|---|
 | `s` | Stop the running timer |
 | `c` | Continue the highlighted entry |
-| `n` | Start a new timer: prompts for a description, then a project (same autocomplete as `e`'s project step below), then tags (comma-separated) |
-| `e` | Edit the highlighted entry (description → start → end → project → tags, one prompt per field; the running entry has no end yet, so that step is skipped). The project step autocompletes: type to filter, `↑`/`↓` to highlight a match, `Enter` to pick it or to submit the typed text as-is; tags are comma-separated and replace the existing set. Blank leaves either unchanged |
+| `n` | Start a new timer: prompts for a description, then a project, then tags (same autocomplete as `e`'s steps below) |
+| `e` | Edit the highlighted entry (description → start → end → project → tags, one prompt per field; the running entry has no end yet, so that step is skipped). Project: type to filter, `↑`/`↓` to highlight a match, `Enter` to pick it or submit the typed text as-is. Tags: comma-separated, replaces the existing set; `↑`/`↓` highlights a match for the segment you're currently typing (after the last comma) and `Tab` inserts it, leaving `Enter` free to submit the whole line whenever you're done. Blank leaves either field unchanged |
 | `d` | Delete the highlighted entry (asks for `y`/`n` confirmation first) |
 | `j` / `k` or `↓` / `↑` | Move the highlight up/down the recent-entries list |
 | `/` | Filter the recent-entries list by description, project, or tag — matches live as you type. `Enter` keeps the filter applied after closing the prompt (submit blank to clear it); `Esc` cancels the edit without changing whatever filter was already active. Filtering never spends API budget — it only searches what's already cached |

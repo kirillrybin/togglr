@@ -6,11 +6,44 @@ import { formatDuration } from "../commands/status.js";
 import { formatTimeHHMM } from "../commands/add.js";
 
 const PROJECT_SUGGESTION_LIMIT = 5;
+const TAG_SUGGESTION_LIMIT = 5;
 
 export function filterProjectSuggestions(projects: Project[], query: string): Project[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
   return projects.filter((p) => p.name.toLowerCase().includes(q)).slice(0, PROJECT_SUGGESTION_LIMIT);
+}
+
+// The tags field is a single comma-separated line (e.g. "urgent, bil"), so
+// suggestions are filtered against just the segment being typed right now —
+// everything after the last comma — not the whole field.
+function currentTagPartial(inputValue: string): string {
+  const lastComma = inputValue.lastIndexOf(",");
+  return (lastComma === -1 ? inputValue : inputValue.slice(lastComma + 1)).trim();
+}
+
+function typedTagsSoFar(inputValue: string): string[] {
+  const lastComma = inputValue.lastIndexOf(",");
+  const before = lastComma === -1 ? "" : inputValue.slice(0, lastComma);
+  return before.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+}
+
+export function filterTagSuggestions(knownTags: string[], inputValue: string): string[] {
+  const partial = currentTagPartial(inputValue).toLowerCase();
+  if (!partial) return [];
+  const already = new Set(typedTagsSoFar(inputValue));
+  return knownTags
+    .filter((t) => t.toLowerCase().includes(partial) && !already.has(t.toLowerCase()))
+    .slice(0, TAG_SUGGESTION_LIMIT);
+}
+
+// Applied on Tab (not Enter, unlike the project step) — tags are multi-value,
+// so picking one should let you keep typing the next one rather than
+// submitting the whole field. Always appends ", " to set up for that.
+export function applyTagSuggestion(inputValue: string, suggestion: string): string {
+  const lastComma = inputValue.lastIndexOf(",");
+  const before = lastComma === -1 ? "" : `${inputValue.slice(0, lastComma + 1)} `;
+  return `${before}${suggestion}, `;
 }
 
 export interface RecentEntryView {
@@ -62,10 +95,14 @@ export interface DashboardProps {
   inputMode: boolean;
   inputLabel: string;
   inputValue: string;
+  // Forces TextInput to remount (see App.tsx) whenever its value was changed
+  // programmatically rather than by the user actually typing.
+  inputResetKey: number;
   onInputChange: (value: string) => void;
   onInputSubmit: (value: string) => void;
   confirmDeleteDescription: string | null;
   projectSuggestions: Project[];
+  tagSuggestions: string[];
   selectedSuggestionIndex: number | null;
   searchQuery: string;
 }
@@ -127,11 +164,21 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
         <Box marginTop={1} flexDirection="column">
           <Box>
             <Text>{props.inputLabel}: </Text>
-            <TextInput value={props.inputValue} onChange={props.onInputChange} onSubmit={props.onInputSubmit} />
+            <TextInput
+              key={props.inputResetKey}
+              value={props.inputValue}
+              onChange={props.onInputChange}
+              onSubmit={props.onInputSubmit}
+            />
           </Box>
           {props.projectSuggestions.map((project, i) => (
             <Text key={project.id} inverse={i === props.selectedSuggestionIndex} dimColor={i !== props.selectedSuggestionIndex}>
               {"  "}{project.name}
+            </Text>
+          ))}
+          {props.tagSuggestions.map((tag, i) => (
+            <Text key={tag} inverse={i === props.selectedSuggestionIndex} dimColor={i !== props.selectedSuggestionIndex}>
+              {"  "}{tag}{i === props.selectedSuggestionIndex ? " (Tab to insert)" : ""}
             </Text>
           ))}
         </Box>

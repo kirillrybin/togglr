@@ -14,7 +14,14 @@ import { resolveRange } from "../commands/report.js";
 import { aggregateReport } from "../domain/report.js";
 import type { Config } from "../config/config.js";
 import type { Project, Timer } from "../domain/models.js";
-import { Dashboard, filterProjectSuggestions, filterEntries, type RecentEntryView } from "./Dashboard.js";
+import {
+  Dashboard,
+  filterProjectSuggestions,
+  filterTagSuggestions,
+  applyTagSuggestion,
+  filterEntries,
+  type RecentEntryView,
+} from "./Dashboard.js";
 
 const REFRESH_INTERVAL_MS = 30_000;
 const TICK_INTERVAL_MS = 1000;
@@ -27,6 +34,7 @@ export interface LoadedState {
   weekTotalSeconds: number;
   recentEntries: RecentEntryView[];
   projects: Project[];
+  knownTags: string[];
   stale: boolean;
 }
 
@@ -36,6 +44,7 @@ const EMPTY_STATE: LoadedState = {
   weekTotalSeconds: 0,
   recentEntries: [],
   projects: [],
+  knownTags: [],
   stale: false,
 };
 
@@ -77,12 +86,16 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
       stop: e.stop,
       tags: e.tags,
     }));
+  // Off the full cached entries list, not just the 20-row recentEntries slice
+  // — a tag from entry 21 is just as worth suggesting as one from entry 1.
+  const knownTags = [...new Set(entries.flatMap((e) => e.tags))].sort();
   return {
     timer,
     todayTotalSeconds: todaySummary.reduce((sum, s) => sum + s.totalSeconds, 0),
     weekTotalSeconds: weekSummary.reduce((sum, s) => sum + s.totalSeconds, 0),
     recentEntries,
     projects,
+    knownTags,
     stale: entriesResult.degraded !== null || projectsResult.degraded !== null,
   };
 }
@@ -138,6 +151,16 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
     setInputValue(value);
     setSuggestionIndex(null);
   }, []);
+  // ink-text-input only advances its internal cursor to the end of a new
+  // `value` when that value got SHORTER than the old cursor position — never
+  // when it got longer (e.g. Tab-completing "fe" to "feature, "). Remounting
+  // via `key` forces it to re-derive cursorOffset from scratch instead of
+  // inserting subsequent keystrokes wherever the stale cursor was left.
+  const [inputResetKey, setInputResetKey] = useState(0);
+  const setProgrammaticInput = useCallback((value: string) => {
+    setInputValue(value);
+    setInputResetKey((k) => k + 1);
+  }, []);
 
   const refresh = useCallback(
     async (opts: { force?: boolean } = {}) => {
@@ -185,19 +208,37 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   // filters `state.projects` by the currently typed text.
   const isProjectStep = mode === "new-timer-project" || mode === "edit-project";
   const projectSuggestions = isProjectStep ? filterProjectSuggestions(state?.projects ?? [], inputValue) : [];
+  // Tags are a single comma-separated field, so suggestions filter against
+  // just the segment being typed right now (see filterTagSuggestions).
+  const isTagsStep = mode === "new-timer-tags" || mode === "edit-tags";
+  const tagSuggestions = isTagsStep ? filterTagSuggestions(view.knownTags, inputValue) : [];
+  const suggestionsLength = isProjectStep ? projectSuggestions.length : tagSuggestions.length;
 
   // Up/Down aren't handled by TextInput itself, so this can run alongside it
   // without conflict — it only ever moves the highlighted suggestion.
   useInput(
     (_input, key) => {
-      if (projectSuggestions.length === 0) return;
+      if (suggestionsLength === 0) return;
       if (key.downArrow) {
-        setSuggestionIndex((i) => (i === null ? 0 : Math.min(i + 1, projectSuggestions.length - 1)));
+        setSuggestionIndex((i) => (i === null ? 0 : Math.min(i + 1, suggestionsLength - 1)));
       } else if (key.upArrow) {
-        setSuggestionIndex((i) => (i === null ? projectSuggestions.length - 1 : Math.max(i - 1, 0)));
+        setSuggestionIndex((i) => (i === null ? suggestionsLength - 1 : Math.max(i - 1, 0)));
       }
     },
-    { isActive: isProjectStep }
+    { isActive: isProjectStep || isTagsStep }
+  );
+
+  // Tab inserts the highlighted (or, if none highlighted yet, the top) tag
+  // suggestion and keeps editing — unlike the project step, Enter here
+  // submits the whole comma-separated field rather than picking one value.
+  useInput(
+    (_input, key) => {
+      if (!key.tab || tagSuggestions.length === 0) return;
+      const picked = tagSuggestions[suggestionIndex ?? 0];
+      setProgrammaticInput(applyTagSuggestion(inputValue, picked));
+      setSuggestionIndex(null);
+    },
+    { isActive: isTagsStep }
   );
 
   useInput(
@@ -242,10 +283,10 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
         // check and the rolling-hour budget gate (the spend is still recorded).
         await refresh({ force: true });
       } else if (input === "n") {
-        setInputValue("");
+        setProgrammaticInput("");
         setMode("new-timer");
       } else if (input === "/") {
-        setInputValue(searchQuery);
+        setProgrammaticInput(searchQuery);
         setMode("search");
       } else if (input === "d" && filteredEntries[clampedSelectedIndex]) {
         const entry = filteredEntries[clampedSelectedIndex];
@@ -268,7 +309,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
           isRunning: entry.stop === null,
         };
         setPendingEdit(next);
-        setInputValue(next.description);
+        setProgrammaticInput(next.description);
         setMode("edit-description");
       } else if (filteredEntries.length > 0) {
         if (input === "j" || key.downArrow) setSelectedIndex((i) => Math.min(i + 1, filteredEntries.length - 1));
@@ -320,7 +361,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       return;
     }
     setPendingNewTimer({ description });
-    setInputValue("");
+    setProgrammaticInput("");
     setSuggestionIndex(null);
     setMode("new-timer-project");
   }, []);
@@ -346,7 +387,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
         projectId = match.id;
       }
       setPendingNewTimer({ ...pendingNewTimer, projectId });
-      setInputValue("");
+      setProgrammaticInput("");
       setSuggestionIndex(null);
       setMode("new-timer-tags");
     },
@@ -379,7 +420,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       if (!pendingEdit) return;
       const next = { ...pendingEdit, description: value };
       setPendingEdit(next);
-      setInputValue(next.start);
+      setProgrammaticInput(next.start);
       setMode("edit-start");
     },
     [pendingEdit]
@@ -392,11 +433,11 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       setPendingEdit(next);
       if (next.isRunning) {
         // No end time to ask for yet — go straight to the project step.
-        setInputValue(next.projectName);
+        setProgrammaticInput(next.projectName);
         setSuggestionIndex(null);
         setMode("edit-project");
       } else {
-        setInputValue(next.end);
+        setProgrammaticInput(next.end);
         setMode("edit-end");
       }
     },
@@ -408,7 +449,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       if (!pendingEdit) return;
       const next = { ...pendingEdit, end: value };
       setPendingEdit(next);
-      setInputValue(next.projectName);
+      setProgrammaticInput(next.projectName);
       setSuggestionIndex(null);
       setMode("edit-project");
     },
@@ -423,7 +464,7 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       const projectName = suggestionIndex !== null ? projectSuggestions[suggestionIndex]?.name : value.trim();
       const next = { ...pendingEdit, projectName: projectName ?? "" };
       setPendingEdit(next);
-      setInputValue(next.tags);
+      setProgrammaticInput(next.tags);
       setSuggestionIndex(null);
       setMode("edit-tags");
     },
@@ -459,12 +500,12 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
     search: { label: "Filter", onSubmit: handleSearchSubmit },
     "new-timer": { label: "New timer", onSubmit: handleNewTimerDescriptionSubmit },
     "new-timer-project": { label: "Project (blank = none)", onSubmit: handleNewTimerProjectSubmit },
-    "new-timer-tags": { label: "Tags (comma-separated, blank = none)", onSubmit: handleNewTimerTagsSubmit },
+    "new-timer-tags": { label: "Tags (comma-separated, Tab to autocomplete, blank = none)", onSubmit: handleNewTimerTagsSubmit },
     "edit-description": { label: "Edit description", onSubmit: handleEditDescriptionSubmit },
     "edit-start": { label: "Edit start (HH:MM)", onSubmit: handleEditStartSubmit },
     "edit-end": { label: "Edit end (HH:MM)", onSubmit: handleEditEndSubmit },
     "edit-project": { label: "Edit project (blank = unchanged)", onSubmit: handleEditProjectSubmit },
-    "edit-tags": { label: "Edit tags (comma-separated, blank = unchanged)", onSubmit: handleEditTagsSubmit },
+    "edit-tags": { label: "Edit tags (comma-separated, Tab to autocomplete, blank = unchanged)", onSubmit: handleEditTagsSubmit },
   };
   const activeInputStep = INPUT_STEPS[mode];
 
@@ -480,10 +521,12 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
       inputMode={activeInputStep !== undefined}
       inputLabel={activeInputStep?.label ?? ""}
       inputValue={inputValue}
+      inputResetKey={inputResetKey}
       onInputChange={handleInputChange}
       onInputSubmit={activeInputStep?.onSubmit ?? (() => {})}
       confirmDeleteDescription={mode === "confirm-delete" ? (pendingDelete?.description ?? null) : null}
       projectSuggestions={projectSuggestions}
+      tagSuggestions={tagSuggestions}
       selectedSuggestionIndex={suggestionIndex}
       searchQuery={searchQuery}
     />

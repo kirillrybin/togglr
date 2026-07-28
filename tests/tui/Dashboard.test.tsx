@@ -5,6 +5,8 @@ import {
   Dashboard,
   computeVisibleWindow,
   filterProjectSuggestions,
+  filterTagSuggestions,
+  applyTagSuggestion,
   filterEntries,
   type RecentEntryView,
 } from "../../src/tui/Dashboard.js";
@@ -60,12 +62,13 @@ describe("Dashboard", () => {
         selectedIndex={0}
         inputMode={false}
         inputLabel=""
-        inputValue=""
+        inputValue="" inputResetKey={0}
         onInputChange={noop}
         onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -84,12 +87,13 @@ describe("Dashboard", () => {
         selectedIndex={0}
         inputMode={false}
         inputLabel=""
-        inputValue=""
+        inputValue="" inputResetKey={0}
         onInputChange={noop}
         onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -107,10 +111,11 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: [] }]}
         stale={false} selectedIndex={0}
-        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -127,10 +132,11 @@ describe("Dashboard", () => {
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["urgent", "billable"] }]}
         stale={false} selectedIndex={0}
-        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -143,10 +149,11 @@ describe("Dashboard", () => {
       <Dashboard
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={true} selectedIndex={0}
-        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -158,10 +165,11 @@ describe("Dashboard", () => {
       <Dashboard
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
-        inputMode={true} inputLabel="New timer" inputValue="Coding" onInputChange={noop} onInputSubmit={noop}
+        inputMode={true} inputLabel="New timer" inputValue="Coding" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -175,10 +183,11 @@ describe("Dashboard", () => {
       <Dashboard
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
-        inputMode={true} inputLabel="Edit start (HH:MM)" inputValue="09:00" onInputChange={noop} onInputSubmit={noop}
+        inputMode={true} inputLabel="Edit start (HH:MM)" inputValue="09:00" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -192,10 +201,11 @@ describe("Dashboard", () => {
       <Dashboard
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(20)} stale={false} selectedIndex={10}
-        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -214,10 +224,11 @@ describe("Dashboard", () => {
       <Dashboard
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(3)} stale={false} selectedIndex={0}
-        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -230,10 +241,11 @@ describe("Dashboard", () => {
       <Dashboard
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
-        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription="Standup"
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -253,10 +265,11 @@ describe("Dashboard", () => {
       <Dashboard
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
-        inputMode={true} inputLabel="Project (blank = none)" inputValue="web" onInputChange={noop} onInputSubmit={noop}
+        inputMode={true} inputLabel="Project (blank = none)" inputValue="web" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={filterProjectSuggestions(projects, "web")}
         selectedSuggestionIndex={1}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -266,15 +279,34 @@ describe("Dashboard", () => {
     expect(frame).not.toContain("Mobile app");
   });
 
+  it("shows tag suggestions with a Tab hint on the highlighted one", () => {
+    const { lastFrame } = render(
+      <Dashboard
+        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={[]} stale={false} selectedIndex={0}
+        inputMode={true} inputLabel="Tags" inputValue="bi" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
+        confirmDeleteDescription={null}
+        projectSuggestions={[]}
+        tagSuggestions={["billable"]}
+        selectedSuggestionIndex={0}
+        searchQuery=""
+      />
+    );
+    const frame = lastFrame() ?? "";
+    expect(frame).toContain("billable");
+    expect(frame).toContain("Tab to insert");
+  });
+
   it("shows a filter indicator with the match count when a search query is active", () => {
     const { lastFrame } = render(
       <Dashboard
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(2)} stale={false} selectedIndex={0}
-        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery="entry"
       />
     );
@@ -287,10 +319,11 @@ describe("Dashboard", () => {
       <Dashboard
         timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(2)} stale={false} selectedIndex={0}
-        inputMode={false} inputLabel="" inputValue="" onInputChange={noop} onInputSubmit={noop}
+        inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null}
         projectSuggestions={[]}
         selectedSuggestionIndex={null}
+        tagSuggestions={[]}
         searchQuery=""
       />
     );
@@ -318,6 +351,37 @@ describe("filterProjectSuggestions", () => {
 
   it("returns nothing when nothing matches", () => {
     expect(filterProjectSuggestions(projects, "nope")).toEqual([]);
+  });
+});
+
+describe("filterTagSuggestions", () => {
+  const knownTags = ["urgent", "billable", "bug", "feature"];
+
+  it("matches case-insensitively against the segment being typed, not the whole field", () => {
+    expect(filterTagSuggestions(knownTags, "bi")).toEqual(["billable"]);
+    expect(filterTagSuggestions(knownTags, "urgent, BU")).toEqual(["bug"]);
+  });
+
+  it("returns nothing once a tag has just been finished (trailing comma, no partial yet)", () => {
+    expect(filterTagSuggestions(knownTags, "urgent, ")).toEqual([]);
+  });
+
+  it("excludes tags already present earlier in the field", () => {
+    expect(filterTagSuggestions(knownTags, "bug, b")).toEqual(["billable"]);
+  });
+
+  it("returns nothing for a blank field", () => {
+    expect(filterTagSuggestions(knownTags, "")).toEqual([]);
+  });
+});
+
+describe("applyTagSuggestion", () => {
+  it("replaces the segment being typed with the picked tag, ready for the next one", () => {
+    expect(applyTagSuggestion("bi", "billable")).toBe("billable, ");
+  });
+
+  it("keeps everything before the last comma untouched", () => {
+    expect(applyTagSuggestion("urgent, bu", "bug")).toBe("urgent, bug, ");
   });
 });
 
