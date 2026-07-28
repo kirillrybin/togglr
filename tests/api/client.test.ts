@@ -125,6 +125,36 @@ describe("TogglClient", () => {
     expect(body.duration).toBe(900);
   });
 
+  it("sends start on its own when stop isn't given (e.g. nudging a running entry's start)", async () => {
+    // Regression test: this used to require BOTH start and stop before
+    // sending EITHER, so editing just the start of a running entry (which
+    // has no stop) silently sent a body without `start` at all — the API
+    // call "succeeded" but never actually moved the entry's start time.
+    (fetch as any).mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    const client = new TogglClient("token");
+
+    await client.updateTimeEntry(999, 5, { start: "2026-07-26T09:00:00.000Z" });
+
+    const [, init] = (fetch as any).mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.start).toBe("2026-07-26T09:00:00.000Z");
+    expect(body.stop).toBeUndefined();
+    expect(body.duration).toBeUndefined();
+  });
+
+  it("sends stop on its own when start isn't given", async () => {
+    (fetch as any).mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    const client = new TogglClient("token");
+
+    await client.updateTimeEntry(999, 5, { stop: "2026-07-26T09:15:00.000Z" });
+
+    const [, init] = (fetch as any).mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.stop).toBe("2026-07-26T09:15:00.000Z");
+    expect(body.start).toBeUndefined();
+    expect(body.duration).toBeUndefined();
+  });
+
   it("sends DELETE request to correct URL for deleteTimeEntry and handles an empty 200 body", async () => {
     (fetch as any).mockResolvedValue({ ok: true, status: 200, json: async () => { throw new Error("no body to parse"); } });
     const client = new TogglClient("token");

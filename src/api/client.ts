@@ -109,9 +109,12 @@ export class TogglClient implements TogglApiClient {
     if (data.description !== undefined) body.description = data.description;
     if (data.project_id !== undefined) body.project_id = data.project_id;
     if (data.tags !== undefined) body.tags = data.tags;
+    // start/stop are sent independently (e.g. nudging just the start of a
+    // still-running entry, which has no stop) — duration is only recomputed
+    // when both are given together, since it'd otherwise be nonsensical.
+    if (data.start !== undefined) body.start = data.start;
+    if (data.stop !== undefined) body.stop = data.stop;
     if (data.start !== undefined && data.stop !== undefined) {
-      body.start = data.start;
-      body.stop = data.stop;
       body.duration = Math.round((new Date(data.stop).getTime() - new Date(data.start).getTime()) / 1000);
     }
     return this.request("PUT", `/workspaces/${workspaceId}/time_entries/${entryId}`, body);
