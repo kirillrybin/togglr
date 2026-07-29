@@ -103,7 +103,10 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
   };
 }
 
-function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.ReactElement {
+// Exported for tests (ink-testing-library drives it directly via stdin.write);
+// renderDashboard below is the real entry point, which also wraps it in the
+// alternate-screen setup that doesn't belong in a headless render.
+export function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.ReactElement {
   const { exit } = useApp();
   // Ink's exit() only unmounts the UI and restores the terminal (raw mode
   // off, cursor back) — it does NOT stop the Node process. Our own
