@@ -6,16 +6,23 @@ export interface Config {
   apiToken: string;
   workspaceId: number;
   cacheTtl: { projects: number; timeEntries: number };
+  showProjectColors: boolean;
 }
 
 export const DEFAULT_TTL = { projects: 21600, timeEntries: 300 };
+export const DEFAULT_SHOW_PROJECT_COLORS = false;
 
 function configFile(configDir: string): string {
   return path.join(configDir, "config.json");
 }
 
 export async function readConfig(configDir: string): Promise<Config | null> {
-  return readJson<Config>(configFile(configDir));
+  // Read as Partial: a config.json written before showProjectColors existed
+  // really is missing that field at runtime, whatever the full Config type
+  // claims — the fallback below is what backfills it, not just documentation.
+  const raw = await readJson<Partial<Config>>(configFile(configDir));
+  if (!raw) return null;
+  return { showProjectColors: DEFAULT_SHOW_PROJECT_COLORS, ...raw } as Config;
 }
 
 export async function writeConfig(configDir: string, config: Config): Promise<void> {

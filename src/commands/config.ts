@@ -7,6 +7,7 @@ export interface ConfigUpdateOptions {
   workspaceId?: number;
   cacheTtlProjects?: number;
   cacheTtlEntries?: number;
+  showProjectColors?: boolean;
 }
 
 export interface ConfigDeps {
@@ -35,6 +36,7 @@ export function formatConfig(config: Config): string {
     `API token: ${maskToken(config.apiToken)}`,
     `Workspace ID: ${config.workspaceId}`,
     `Cache TTL: projects=${config.cacheTtl.projects}s, time entries=${config.cacheTtl.timeEntries}s`,
+    `Project colors: ${config.showProjectColors ? "on" : "off"}`,
   ].join("\n");
 }
 
@@ -76,6 +78,9 @@ export async function runConfigUpdate(
         timeEntries: opts.cacheTtlEntries ?? next.cacheTtl.timeEntries,
       },
     };
+  }
+  if (opts.showProjectColors !== undefined) {
+    next = { ...next, showProjectColors: opts.showProjectColors };
   }
 
   await writeConfig(configDir, next);

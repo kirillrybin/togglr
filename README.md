@@ -61,7 +61,7 @@ toggl status
 toggl continue
 toggl list-projects
 toggl report [today|week] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--csv]
-toggl config [--token] [--workspace <id>] [--cache-ttl-projects <seconds>] [--cache-ttl-entries <seconds>]
+toggl config [--token] [--workspace <id>] [--cache-ttl-projects <seconds>] [--cache-ttl-entries <seconds>] [--project-colors <on|off>]
 toggl completion <bash|zsh> [--install]
 toggl --version
 toggl
@@ -79,7 +79,7 @@ toggl
 | `continue` | Repeat the most recent time entry |
 | `list-projects` | List cached projects |
 | `report [today\|week] [--from] [--to] [--csv]` | Print a per-project time breakdown. `--from`/`--to` (`YYYY-MM-DD`, `--to` inclusive, defaults to today) override the preset range; `--csv` prints `project,duration,seconds` instead of plain text |
-| `config` | Show current settings (token masked); with `--token`/`--workspace`/`--cache-ttl-projects`/`--cache-ttl-entries`, changes them instead |
+| `config` | Show current settings (token masked); with `--token`/`--workspace`/`--cache-ttl-projects`/`--cache-ttl-entries`/`--project-colors`, changes them instead |
 | `completion <bash\|zsh> [--install]` | Print a shell completion script, or `--install` it into your rc file — see [Shell completion](#shell-completion) |
 | `--version` / `-v` | Print the installed version |
 | *(no arguments)* | Launch the TUI dashboard |
@@ -90,11 +90,14 @@ Running `toggl` with no arguments opens a live dashboard: the current
 timer, a today/week summary, and recent entries (shown as
 `description [project] #tag1 #tag2 — duration (start–end)`, project/tags
 omitted when there aren't any, and the `(start–end)` range omitted for the
-still-running entry, which has no end yet). Up to 20 recent entries are
-kept, displayed through a scrolling 5-row window that follows the highlight
-(`↑ N more` / `↓ N more` indicate what's scrolled off-screen). The
-dashboard runs in the terminal's alternate screen buffer (like
-`vim`/`htop`), so it fully disappears on exit instead of leaving its last
+still-running entry, which has no end yet). The `[project]` name — and the
+`●` next to the active timer's description — can be colored with that
+project's actual color from Toggl (needs a truecolor-capable terminal); off
+by default, `toggl config --project-colors on` to enable. Up to 20 recent
+entries are kept, displayed through a scrolling 5-row window that
+follows the highlight (`↑ N more` / `↓ N more` indicate what's scrolled
+off-screen). The dashboard runs in the terminal's alternate screen buffer
+(like `vim`/`htop`), so it fully disappears on exit instead of leaving its last
 frame in your shell.
 
 | Key | Action |

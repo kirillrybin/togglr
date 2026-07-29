@@ -7,7 +7,7 @@ import { writeCacheEntry } from "../../src/cache/store.js";
 import type { SyncContext } from "../../src/cache/sync.js";
 import type { Config } from "../../src/config/config.js";
 
-const config: Config = { apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 } };
+const config: Config = { apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 }, showProjectColors: true };
 
 describe("commands/continueLast", () => {
   it("starts a new timer with the same description and project as the most recent entry", async () => {

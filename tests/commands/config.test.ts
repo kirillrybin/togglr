@@ -32,7 +32,7 @@ describe("commands/config", () => {
     });
 
     it("formats the existing config with the token masked", async () => {
-      await writeConfig(dir, { apiToken: "abcd1234efgh5678", workspaceId: 9, cacheTtl: DEFAULT_TTL });
+      await writeConfig(dir, { apiToken: "abcd1234efgh5678", workspaceId: 9, cacheTtl: DEFAULT_TTL, showProjectColors: true });
 
       const output = await runConfigShow(dir);
 
@@ -48,16 +48,25 @@ describe("commands/config", () => {
     });
 
     it("updates just the workspace id, leaving everything else untouched", async () => {
-      await writeConfig(dir, { apiToken: "t", workspaceId: 9, cacheTtl: DEFAULT_TTL });
+      await writeConfig(dir, { apiToken: "t", workspaceId: 9, cacheTtl: DEFAULT_TTL, showProjectColors: true });
 
       const next = await runConfigUpdate(dir, { workspaceId: 42 });
 
-      expect(next).toEqual({ apiToken: "t", workspaceId: 42, cacheTtl: DEFAULT_TTL });
+      expect(next).toEqual({ apiToken: "t", workspaceId: 42, cacheTtl: DEFAULT_TTL, showProjectColors: true });
       expect(await readConfig(dir)).toEqual(next);
     });
 
+    it("updates showProjectColors on its own", async () => {
+      await writeConfig(dir, { apiToken: "t", workspaceId: 9, cacheTtl: DEFAULT_TTL, showProjectColors: true });
+
+      const next = await runConfigUpdate(dir, { showProjectColors: false });
+
+      expect(next.showProjectColors).toBe(false);
+      expect(next.workspaceId).toBe(9);
+    });
+
     it("updates only the given cache TTL, leaving the other one untouched", async () => {
-      await writeConfig(dir, { apiToken: "t", workspaceId: 9, cacheTtl: DEFAULT_TTL });
+      await writeConfig(dir, { apiToken: "t", workspaceId: 9, cacheTtl: DEFAULT_TTL, showProjectColors: true });
 
       const next = await runConfigUpdate(dir, { cacheTtlProjects: 999 });
 
@@ -65,7 +74,7 @@ describe("commands/config", () => {
     });
 
     it("prompts for a new token and re-detects the default workspace", async () => {
-      await writeConfig(dir, { apiToken: "old", workspaceId: 9, cacheTtl: DEFAULT_TTL });
+      await writeConfig(dir, { apiToken: "old", workspaceId: 9, cacheTtl: DEFAULT_TTL, showProjectColors: true });
       const prompt = vi.fn().mockResolvedValue("newtoken");
       const getMe = vi.fn().mockResolvedValue({ id: 1, default_workspace_id: 77 });
       const createClient = vi.fn().mockReturnValue({ getMe });
@@ -78,7 +87,7 @@ describe("commands/config", () => {
     });
 
     it("applies an explicit --workspace override on top of a re-detected one", async () => {
-      await writeConfig(dir, { apiToken: "old", workspaceId: 9, cacheTtl: DEFAULT_TTL });
+      await writeConfig(dir, { apiToken: "old", workspaceId: 9, cacheTtl: DEFAULT_TTL, showProjectColors: true });
       const prompt = vi.fn().mockResolvedValue("newtoken");
       const getMe = vi.fn().mockResolvedValue({ id: 1, default_workspace_id: 77 });
       const createClient = vi.fn().mockReturnValue({ getMe });
@@ -90,12 +99,22 @@ describe("commands/config", () => {
   });
 
   describe("formatConfig", () => {
-    it("includes the masked token, workspace id, and both cache TTLs", () => {
-      const output = formatConfig({ apiToken: "abcd1234efgh5678", workspaceId: 3, cacheTtl: { projects: 60, timeEntries: 30 } });
+    it("includes the masked token, workspace id, both cache TTLs, and the project-colors setting", () => {
+      const output = formatConfig({
+        apiToken: "abcd1234efgh5678", workspaceId: 3, cacheTtl: { projects: 60, timeEntries: 30 }, showProjectColors: true,
+      });
       expect(output).toContain("abcd********5678");
       expect(output).toContain("Workspace ID: 3");
       expect(output).toContain("projects=60s");
       expect(output).toContain("time entries=30s");
+      expect(output).toContain("Project colors: on");
+    });
+
+    it("shows the project-colors setting as off when disabled", () => {
+      const output = formatConfig({
+        apiToken: "t", workspaceId: 3, cacheTtl: { projects: 60, timeEntries: 30 }, showProjectColors: false,
+      });
+      expect(output).toContain("Project colors: off");
     });
   });
 });

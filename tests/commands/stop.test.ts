@@ -10,7 +10,7 @@ import type { RateLimiterState } from "../../src/cache/rateLimiter.js";
 import type { SyncContext } from "../../src/cache/sync.js";
 import type { Config } from "../../src/config/config.js";
 
-const config: Config = { apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 } };
+const config: Config = { apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 }, showProjectColors: true };
 
 describe("commands/stop", () => {
   it("stops the running timer, clears local state, and invalidates the entries cache", async () => {

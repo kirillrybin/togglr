@@ -21,7 +21,7 @@ function makeEntries(count: number): RecentEntryView[] {
     description: `Entry ${i}`,
     totalSeconds: 60,
     projectId: null,
-    projectName: null,
+    projectName: null, projectColor: null,
     start: "2026-07-26T11:00:00Z",
     stop: "2026-07-26T11:01:00Z",
     tags: [],
@@ -53,7 +53,7 @@ describe("Dashboard", () => {
   it("shows 'No timer running' when there is no active timer", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null}
+        timer={null} timerProjectColor={null} showProjectColors={true}
         elapsedSeconds={0}
         todayTotalSeconds={0}
         weekTotalSeconds={0}
@@ -79,10 +79,11 @@ describe("Dashboard", () => {
     const { lastFrame } = render(
       <Dashboard
         timer={{ entryId: 1, description: "Coding on togglr", projectId: null, workspaceId: 9, startedAt: "2026-07-26T11:00:00Z" }}
+        timerProjectColor={null} showProjectColors={true}
         elapsedSeconds={2537}
         todayTotalSeconds={11520}
         weekTotalSeconds={50700}
-        recentEntries={[{ entryId: 2, description: "Standup", totalSeconds: 900, projectId: 5, projectName: "Website", start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:15:00Z", tags: [] }]}
+        recentEntries={[{ entryId: 2, description: "Standup", totalSeconds: 900, projectId: 5, projectName: "Website", projectColor: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:15:00Z", tags: [] }]}
         stale={false}
         selectedIndex={0}
         inputMode={false}
@@ -108,8 +109,8 @@ describe("Dashboard", () => {
   it("shows no project marker when a recent entry has no project", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
-        recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: [] }]}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, projectColor: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: [] }]}
         stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -129,8 +130,8 @@ describe("Dashboard", () => {
   it("shows tags on an entry's row, hashtag-prefixed", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
-        recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["urgent", "billable"] }]}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        recentEntries={[{ entryId: 1, description: "Misc", totalSeconds: 60, projectId: null, projectName: null, projectColor: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["urgent", "billable"] }]}
         stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -147,7 +148,7 @@ describe("Dashboard", () => {
   it("shows a stale indicator when the cache could not be refreshed", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={true} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -163,7 +164,7 @@ describe("Dashboard", () => {
   it("shows an inline prompt with the given label and current input value", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="New timer" inputValue="Coding" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -181,7 +182,7 @@ describe("Dashboard", () => {
   it("shows a different label for an edit-flow prompt", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="Edit start (HH:MM)" inputValue="09:00" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -199,7 +200,7 @@ describe("Dashboard", () => {
   it("only renders the visible window and shows scroll indicators when there are more entries than fit", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(20)} stale={false} selectedIndex={10}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -222,7 +223,7 @@ describe("Dashboard", () => {
   it("shows no scroll indicators when every entry fits in the visible window", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(3)} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -239,7 +240,7 @@ describe("Dashboard", () => {
   it("shows a delete confirmation prompt naming the entry, instead of the normal hint", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription="Standup" lastDeletedDescription={null}
@@ -258,7 +259,7 @@ describe("Dashboard", () => {
   it("shows an undo hint after a delete, naming the deleted entry", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription="Standup"
@@ -276,7 +277,7 @@ describe("Dashboard", () => {
   it("hides the undo hint while a wizard prompt or delete confirmation is showing", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="New timer" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription="Standup"
@@ -298,7 +299,7 @@ describe("Dashboard", () => {
     ];
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="Project (blank = none)" inputValue="web" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -317,7 +318,7 @@ describe("Dashboard", () => {
   it("shows tag suggestions with a Tab hint on the highlighted one", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={[]} stale={false} selectedIndex={0}
         inputMode={true} inputLabel="Tags" inputValue="bi" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -335,7 +336,7 @@ describe("Dashboard", () => {
   it("shows a filter indicator with the match count when a search query is active", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(2)} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -352,7 +353,7 @@ describe("Dashboard", () => {
   it("shows no filter indicator when there's no active search query", () => {
     const { lastFrame } = render(
       <Dashboard
-        timer={null} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
+        timer={null} timerProjectColor={null} showProjectColors={true} elapsedSeconds={0} todayTotalSeconds={0} weekTotalSeconds={0}
         recentEntries={makeEntries(2)} stale={false} selectedIndex={0}
         inputMode={false} inputLabel="" inputValue="" inputResetKey={0} onInputChange={noop} onInputSubmit={noop}
         confirmDeleteDescription={null} lastDeletedDescription={null}
@@ -422,9 +423,9 @@ describe("applyTagSuggestion", () => {
 
 describe("filterEntries", () => {
   const entries: RecentEntryView[] = [
-    { entryId: 1, description: "Fix login bug", totalSeconds: 60, projectId: 5, projectName: "Website", start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["urgent"] },
-    { entryId: 2, description: "Standup", totalSeconds: 60, projectId: null, projectName: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["meeting"] },
-    { entryId: 3, description: "Write docs", totalSeconds: 60, projectId: 7, projectName: "Docs", start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: [] },
+    { entryId: 1, description: "Fix login bug", totalSeconds: 60, projectId: 5, projectName: "Website", projectColor: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["urgent"] },
+    { entryId: 2, description: "Standup", totalSeconds: 60, projectId: null, projectName: null, projectColor: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: ["meeting"] },
+    { entryId: 3, description: "Write docs", totalSeconds: 60, projectId: 7, projectName: "Docs", projectColor: null, start: "2026-07-26T11:00:00Z", stop: "2026-07-26T11:01:00Z", tags: [] },
   ];
 
   it("returns everything for a blank query", () => {

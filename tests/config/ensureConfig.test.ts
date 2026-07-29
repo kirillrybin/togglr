@@ -18,7 +18,7 @@ describe("ensureConfig", () => {
 
   it("returns the existing config without prompting when one is present", async () => {
     const { writeConfig, DEFAULT_TTL } = await import("../../src/config/config.js");
-    const existing = { apiToken: "existing", workspaceId: 7, cacheTtl: DEFAULT_TTL };
+    const existing = { apiToken: "existing", workspaceId: 7, cacheTtl: DEFAULT_TTL, showProjectColors: true };
     await writeConfig(dir, existing);
     const prompt = vi.fn();
     const result = await ensureConfig(dir, { prompt });
@@ -35,6 +35,7 @@ describe("ensureConfig", () => {
 
     expect(result.apiToken).toBe("newtoken");
     expect(result.workspaceId).toBe(42);
+    expect(result.showProjectColors).toBe(false);
     expect(createClient).toHaveBeenCalledWith("newtoken");
     expect(await readConfig(dir)).toEqual(result);
   });

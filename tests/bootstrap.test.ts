@@ -21,7 +21,7 @@ describe("buildContext", () => {
 
   it("builds a SyncContext from an existing config without prompting", async () => {
     await writeConfig(configDir, {
-      apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 },
+      apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 }, showProjectColors: true,
     });
     const { ctx, config } = await buildContext({ configDir, cacheDir });
     expect(config.workspaceId).toBe(9);

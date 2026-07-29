@@ -19,7 +19,7 @@ function makeCtx(cacheDir: string, client: Partial<SyncContext["client"]>): Sync
   };
 }
 
-const config: Config = { apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 } };
+const config: Config = { apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 }, showProjectColors: true };
 
 describe("commands/undoDelete", () => {
   it("recreates a completed entry with its original description/project/tags/start/stop", async () => {

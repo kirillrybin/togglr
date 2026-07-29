@@ -20,7 +20,7 @@ function makeCtx(cacheDir: string, client: Partial<SyncContext["client"]>): Sync
   };
 }
 
-const config: Config = { apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 } };
+const config: Config = { apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 }, showProjectColors: true };
 
 describe("commands/deleteEntry", () => {
   it("deletes the entry, records spend, and invalidates the entries cache", async () => {

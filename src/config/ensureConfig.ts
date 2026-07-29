@@ -1,6 +1,6 @@
 import readline from "node:readline/promises";
 import { TogglClient, type TogglApiClient } from "../api/client.js";
-import { readConfig, writeConfig, DEFAULT_TTL, type Config } from "./config.js";
+import { readConfig, writeConfig, DEFAULT_TTL, DEFAULT_SHOW_PROJECT_COLORS, type Config } from "./config.js";
 
 export interface EnsureConfigDeps {
   prompt?: (question: string) => Promise<string>;
@@ -25,7 +25,12 @@ export async function ensureConfig(configDir: string, deps: EnsureConfigDeps = {
   const client = createClient(token);
   const me = await client.getMe(false);
 
-  const config: Config = { apiToken: token, workspaceId: me.default_workspace_id, cacheTtl: DEFAULT_TTL };
+  const config: Config = {
+    apiToken: token,
+    workspaceId: me.default_workspace_id,
+    cacheTtl: DEFAULT_TTL,
+    showProjectColors: DEFAULT_SHOW_PROJECT_COLORS,
+  };
   await writeConfig(configDir, config);
   return config;
 }

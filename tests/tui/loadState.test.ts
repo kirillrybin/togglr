@@ -97,6 +97,7 @@ describe("tui loadState", () => {
     const state = await loadState(makeCtx(dir, getMe));
 
     expect(state.recentEntries[0].projectName).toBe("Website");
+    expect(state.recentEntries[0].projectColor).toBe("#fff");
   });
 
   it("uses null projectName for an entry with no project, or one missing from the cache", async () => {
@@ -117,6 +118,8 @@ describe("tui loadState", () => {
 
     expect(state.recentEntries.find((e) => e.entryId === 1)?.projectName).toBeNull();
     expect(state.recentEntries.find((e) => e.entryId === 2)?.projectName).toBeNull();
+    expect(state.recentEntries.find((e) => e.entryId === 1)?.projectColor).toBeNull();
+    expect(state.recentEntries.find((e) => e.entryId === 2)?.projectColor).toBeNull();
   });
 
   it("forwards force:true to the sync layer, bypassing a fresh cache and an empty budget", async () => {

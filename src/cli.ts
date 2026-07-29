@@ -162,13 +162,34 @@ program
   .option("--workspace <id>", "change the workspace id used for new/edited entries")
   .option("--cache-ttl-projects <seconds>", "change the projects cache TTL")
   .option("--cache-ttl-entries <seconds>", "change the time-entries cache TTL")
+  .option("--project-colors <on|off>", "toggle coloring project names and the active-timer dot in the TUI")
   .action(
-    async (opts: { token?: boolean; workspace?: string; cacheTtlProjects?: string; cacheTtlEntries?: string }) => {
+    async (opts: {
+      token?: boolean;
+      workspace?: string;
+      cacheTtlProjects?: string;
+      cacheTtlEntries?: string;
+      projectColors?: string;
+    }) => {
       const configDir = getConfigDir();
       const workspaceId = parsePositiveInt("workspace id", opts.workspace);
       const cacheTtlProjects = parsePositiveInt("cache TTL", opts.cacheTtlProjects);
       const cacheTtlEntries = parsePositiveInt("cache TTL", opts.cacheTtlEntries);
-      if (!opts.token && workspaceId === undefined && cacheTtlProjects === undefined && cacheTtlEntries === undefined) {
+      let showProjectColors: boolean | undefined;
+      if (opts.projectColors !== undefined) {
+        if (opts.projectColors !== "on" && opts.projectColors !== "off") {
+          console.error(`Invalid --project-colors value: "${opts.projectColors}". Use "on" or "off".`);
+          process.exit(1);
+        }
+        showProjectColors = opts.projectColors === "on";
+      }
+      if (
+        !opts.token &&
+        workspaceId === undefined &&
+        cacheTtlProjects === undefined &&
+        cacheTtlEntries === undefined &&
+        showProjectColors === undefined
+      ) {
         console.log(await runConfigShow(configDir));
         return;
       }
@@ -177,6 +198,7 @@ program
         workspaceId,
         cacheTtlProjects,
         cacheTtlEntries,
+        showProjectColors,
       });
       console.log(formatConfig(next));
     }

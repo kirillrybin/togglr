@@ -52,6 +52,7 @@ export interface RecentEntryView {
   totalSeconds: number;
   projectId: number | null;
   projectName: string | null;
+  projectColor: string | null;
   start: string;
   stop: string | null;
   tags: string[];
@@ -86,6 +87,8 @@ export function computeVisibleWindow(
 
 export interface DashboardProps {
   timer: Timer | null;
+  timerProjectColor: string | null;
+  showProjectColors: boolean;
   elapsedSeconds: number;
   todayTotalSeconds: number;
   weekTotalSeconds: number;
@@ -113,7 +116,14 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
     <Box flexDirection="column" borderStyle="round" paddingX={1}>
       <Box justifyContent="space-between">
         <Text>
-          {props.timer ? `● ${props.timer.description}` : "No timer running"}
+          {props.timer ? (
+            <>
+              <Text color={props.showProjectColors ? (props.timerProjectColor ?? undefined) : undefined}>●</Text>{" "}
+              {props.timer.description}
+            </>
+          ) : (
+            "No timer running"
+          )}
         </Text>
         <Text>{props.timer ? formatDuration(props.elapsedSeconds) : ""}</Text>
       </Box>
@@ -143,7 +153,13 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
               {props.recentEntries.slice(start, end).map((entry, i) => (
                 <Text key={start + i} inverse={start + i === props.selectedIndex}>
                   {entry.description}
-                  {entry.projectName ? ` [${entry.projectName}]` : ""}
+                  {entry.projectName ? (
+                    <Text color={props.showProjectColors ? (entry.projectColor ?? undefined) : undefined}>
+                      {" "}[{entry.projectName}]
+                    </Text>
+                  ) : (
+                    ""
+                  )}
                   {entry.tags.length > 0 ? ` ${entry.tags.map((t) => `#${t}`).join(" ")}` : ""}
                   {" — "}{formatDuration(entry.totalSeconds)}
                   {entry.stop !== null ? ` (${formatTimeHHMM(entry.start)}–${formatTimeHHMM(entry.stop)})` : ""}
@@ -179,7 +195,7 @@ export function Dashboard(props: DashboardProps): React.ReactElement {
           </Box>
           {props.projectSuggestions.map((project, i) => (
             <Text key={project.id} inverse={i === props.selectedSuggestionIndex} dimColor={i !== props.selectedSuggestionIndex}>
-              {"  "}{project.name}
+              {"  "}<Text color={props.showProjectColors ? project.color : undefined}>●</Text> {project.name}
             </Text>
           ))}
           {props.tagSuggestions.map((tag, i) => (

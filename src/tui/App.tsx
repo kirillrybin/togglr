@@ -72,6 +72,7 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
   const todaySummary = aggregateReport(entries, projects, today.from, today.to, now);
   const weekSummary = aggregateReport(entries, projects, week.from, week.to, now);
   const projectNameById = new Map(projects.map((p) => [p.id, p.name]));
+  const projectColorById = new Map(projects.map((p) => [p.id, p.color]));
   const recentEntries: RecentEntryView[] = [...entries]
     .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime())
     .slice(0, RECENT_ENTRIES_COUNT)
@@ -83,6 +84,7 @@ export async function loadState(ctx: SyncContext, opts: { force?: boolean } = {}
       totalSeconds: e.durationSeconds ?? (now.getTime() - new Date(e.start).getTime()) / 1000,
       projectId: e.projectId,
       projectName: e.projectId !== null ? (projectNameById.get(e.projectId) ?? null) : null,
+      projectColor: e.projectId !== null ? (projectColorById.get(e.projectId) ?? null) : null,
       start: e.start,
       stop: e.stop,
       tags: e.tags,
@@ -208,6 +210,10 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
     : 0;
 
   const view = state ?? EMPTY_STATE;
+  const timerProjectColor =
+    view.timer?.projectId != null
+      ? (view.projects.find((p) => p.id === view.timer!.projectId)?.color ?? null)
+      : null;
   // While actively typing a search, filter live off the in-progress text;
   // once submitted (or when not searching at all), use the committed query.
   const activeSearchQuery = mode === "search" ? inputValue : searchQuery;
@@ -540,6 +546,8 @@ function App({ ctx, config }: { ctx: SyncContext; config: Config }): React.React
   return (
     <Dashboard
       timer={view.timer}
+      timerProjectColor={timerProjectColor}
+      showProjectColors={config.showProjectColors}
       elapsedSeconds={elapsedSeconds}
       todayTotalSeconds={view.todayTotalSeconds}
       weekTotalSeconds={view.weekTotalSeconds}

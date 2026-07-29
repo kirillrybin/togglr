@@ -20,7 +20,7 @@ function makeCtx(cacheDir: string, client: Partial<SyncContext["client"]>): Sync
   };
 }
 
-const config: Config = { apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 } };
+const config: Config = { apiToken: "t", workspaceId: 9, cacheTtl: { projects: 21600, timeEntries: 300 }, showProjectColors: true };
 
 describe("commands/start", () => {
   it("createTimer creates a time entry and writes the local timer state", async () => {
