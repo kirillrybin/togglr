@@ -1,6 +1,6 @@
 {
   "name": "@kirillrybin/togglr",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "A CLI + terminal UI for Toggl Track, built to stay well under the API rate limit",
   "license": "MIT",
   "repository": {
